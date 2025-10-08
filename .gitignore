@@ -1,0 +1,8 @@
+# Dependencies
+node_modules/
+
+# Caches
+.cache/
+
+# Environment variables
+.env

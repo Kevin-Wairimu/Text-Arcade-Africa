@@ -1,0 +1,9 @@
+<!-- logo-icon.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="taaIconTitle">
+  <title id="taaIconTitle">Text Africa Arcade icon</title>
+  <rect x="0" y="0" width="128" height="128" rx="18" fill="#1E6B2B"></rect>
+  <circle cx="44" cy="44" r="16" fill="#FFFFFF"></circle>
+  <path d="M62 36 L98 36 L98 44 L76 44 L76 92 L62 92 Z" fill="#FFFFFF"></path>
+  <!-- accent ring -->
+  <circle cx="64" cy="64" r="60" fill="none" stroke="#77BFA1" stroke-opacity="0.06" stroke-width="8"></circle>
+</svg>
