@@ -3,39 +3,38 @@ const Article = require('../models/Article'); // Make sure this path is correct
 // --- GET ALL ARTICLES ---
 exports.getAllArticles = async (req, res) => {
   console.log('SERVER: getAllArticles controller hit with query:', req.query);
+
   try {
     const { search, category } = req.query;
 
-    // Build the query object dynamically
+    // ✅ Ensure query object doesn’t block everything when empty
     const query = {};
 
-    if (category) {
+    // ✅ Only filter by category if not “All” or blank
+    if (category && category !== "All" && category.trim() !== "") {
       query.category = category;
     }
 
-    if (search) {
-      // Use $or to search in both title and content
-      // Use $regex with 'i' for case-insensitive search
+    // ✅ Only apply search if a valid string
+    if (search && search.trim() !== "") {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
         { content: { $regex: search, $options: 'i' } }
       ];
     }
 
-    // First, find all matching articles to get the total count
+    // ✅ Fetch from DB
     const total = await Article.countDocuments(query);
-    
-    // Then, find the articles and sort them
     const articles = await Article.find(query).sort({ publishedAt: -1 });
 
     console.log(`SERVER: Found ${articles.length} articles out of ${total} total matches.`);
     
-    // Return both the articles and the total count
-    res.json({ articles, total });
-    
+    // ✅ Return full payload
+    res.json({ success: true, total, articles });
+
   } catch (err) {
     console.error('SERVER ERROR fetching articles:', err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 

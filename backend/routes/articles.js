@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const articleController = require('../controllers/articleController');
-const authMiddleware = require('../middleware/auth');
+const authMiddleware = require('../middleware/authMiddleware');
 
 console.log('SERVER: Setting up article routes...');
 

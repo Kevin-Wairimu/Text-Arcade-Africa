@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAlert } from '../context/AlertContext';
 
 const toastVariants = {
-  hidden: { opacity: 0, y: 50, scale: 0.8 },
+  hidden: { opacity: 0, y: 40, scale: 0.9 },
   visible: { opacity: 1, y: 0, scale: 1 },
   exit: { opacity: 0, y: 20, scale: 0.9 },
 };
@@ -11,33 +11,37 @@ const toastVariants = {
 export default function Alert() {
   const { alert, hideAlert } = useAlert();
 
-  if (!alert) {
-    return null;
-  }
+  // ✅ Automatically hide the alert after 3.5 seconds
+  useEffect(() => {
+    if (alert) {
+      const timer = setTimeout(() => {
+        hideAlert();
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [alert, hideAlert]);
 
-  // --- START OF CHANGES ---
+  if (!alert) return null;
 
-  // Determine the style based on alert.type
+  // 🌈 Dynamic style + emoji icon depending on alert type
   let bgColor, icon;
   switch (alert.type) {
     case 'success':
-      bgColor = 'bg-gradient-to-r from-[#1E6B2B] to-[#77BFA1]';
+      bgColor = 'bg-gradient-to-r from-emerald-600/70 to-teal-400/60';
       icon = '✅';
       break;
     case 'error':
-      bgColor = 'bg-gradient-to-r from-red-600 to-red-400';
+      bgColor = 'bg-gradient-to-r from-red-600/70 to-rose-400/60';
       icon = '❌';
       break;
-    case 'logout': // Our new, eye-catching style for logging out
-      bgColor = 'bg-gradient-to-r from-gray-700 to-gray-500';
+    case 'logout':
+      bgColor = 'bg-gradient-to-r from-gray-700/70 to-gray-500/60';
       icon = '👋';
       break;
-    default: // A default 'info' style
-      bgColor = 'bg-gradient-to-r from-blue-600 to-blue-400';
+    default:
+      bgColor = 'bg-gradient-to-r from-blue-600/70 to-cyan-400/60';
       icon = 'ℹ️';
   }
-
-  // --- END OF CHANGES ---
 
   return (
     <AnimatePresence>
@@ -47,16 +51,16 @@ export default function Alert() {
           initial="hidden"
           animate="visible"
           exit="exit"
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          className={`fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between w-full max-w-sm p-4 rounded-xl shadow-2xl text-white ${bgColor}`}
+          transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between w-full max-w-sm px-5 py-4 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.3)] text-white ${bgColor} backdrop-blur-xl border border-white/20`}
         >
-          <div className="flex items-center">
-            <span className="text-xl mr-3">{icon}</span>
-            <p className="font-medium">{alert.message}</p>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{icon}</span>
+            <p className="font-medium text-sm sm:text-base">{alert.message}</p>
           </div>
           <button
             onClick={hideAlert}
-            className="text-2xl text-white/70 hover:text-white transition-opacity"
+            className="text-2xl text-white/70 hover:text-white transition"
             aria-label="Close alert"
           >
             &times;

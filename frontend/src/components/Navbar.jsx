@@ -2,15 +2,17 @@ import React, { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAlert } from "../context/AlertContext";
 import Logo from "./Logo";
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { showAlert } = useAlert();
 
   const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role"); // ✅ get stored role
+  const role = localStorage.getItem("role");
 
   const navLinks = [
     { name: "Home", to: "/" },
@@ -26,34 +28,44 @@ export default function Nav() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    alert("👋 Logged out successfully!");
-    navigate("/");
-  };
+ const handleLogout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
 
-  // ✅ Decide which dashboard link to show
+  // ✅ Use your custom alert system instead of window.alert()
+  showAlert("Logged out successfully!", "logout");
+
+  // Redirect after a short delay so the user sees the message
+  setTimeout(() => {
+    navigate("/");
+  }, 1200);
+};
+
   const dashboardPath =
     role === "Admin" || role === "Employee" ? "/admin" : "/client";
 
   return (
     <header
-      className={`fixed w-full top-0 z-50 transition-all duration-300 ${
+      className={`fixed w-full top-0 z-50 transition-all duration-500 ${
         scrolled
-          ? "bg-white/95 backdrop-blur-md shadow-sm"
-          : "bg-gradient-to-b from-white/90 to-transparent"
+          ? "bg-white/30 backdrop-blur-2xl border-b border-white/30 shadow-md"
+          : "bg-gradient-to-b from-white/20 via-emerald-50/30 to-transparent backdrop-blur-lg"
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-        {/* Logo and Name */}
-        <Link to="/" className="flex items-center gap-3">
-          <Logo size={36} mode="icon" />
+        {/* Logo Section */}
+        <Link to="/" className="flex items-center gap-3 group">
+          <motion.div
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <Logo size={44} mode="icon" /> {/* ✅ Larger for visibility */}
+          </motion.div>
           <div>
-            <div className="font-bold text-lg text-taa-primary">
+            <div className="font-extrabold text-xl text-taa-primary tracking-tight group-hover:text-taa-accent transition">
               Text Africa Arcade
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-xs text-gray-600 italic">
               Digital transformation for text products
             </div>
           </div>
@@ -67,7 +79,7 @@ export default function Nav() {
               to={link.to}
               className={({ isActive }) =>
                 isActive
-                  ? "text-taa-primary border-b-2 border-taa-primary pb-1"
+                  ? "text-taa-accent border-b-2 border-taa-accent pb-1"
                   : "text-gray-700 hover:text-taa-primary transition"
               }
             >
@@ -86,7 +98,7 @@ export default function Nav() {
               </NavLink>
               <button
                 onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-lg transition"
+                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm px-5 py-2 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
               >
                 Logout
               </button>
@@ -95,13 +107,13 @@ export default function Nav() {
             <>
               <Link
                 to="/login"
-                className="bg-taa-primary hover:bg-taa-accent text-white text-sm px-4 py-2 rounded-lg shadow-sm transition"
+                className="bg-gradient-to-r from-taa-primary to-taa-accent text-white text-sm px-5 py-2 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
               >
                 Login
               </Link>
               <Link
                 to="/register"
-                className="border border-taa-primary text-taa-primary hover:bg-taa-primary hover:text-white text-sm px-4 py-2 rounded-lg transition"
+                className="border border-taa-primary text-taa-primary hover:bg-taa-primary hover:text-white text-sm px-5 py-2 rounded-full shadow-sm transition-all duration-300"
               >
                 Register
               </Link>
@@ -109,21 +121,21 @@ export default function Nav() {
           )}
         </nav>
 
-        {/* Hamburger Icon */}
-        <button
-          className="md:hidden text-taa-primary focus:outline-none"
+        {/* Mobile Menu Icon */}
+        <motion.button
+          className="md:hidden text-taa-primary focus:outline-none bg-white/30 p-2 rounded-full backdrop-blur-md border border-white/30 shadow-sm"
           onClick={() => setMenuOpen(!menuOpen)}
+          whileTap={{ scale: 0.9 }}
           aria-label="Toggle menu"
         >
-          {menuOpen ? <X size={28} /> : <Menu size={28} />}
-        </button>
+          {menuOpen ? <X size={32} /> : <Menu size={32} />} {/* ✅ Larger icons */}
+        </motion.button>
       </div>
 
-      {/* Overlay + Slide-in Menu */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {menuOpen && (
           <>
-            {/* Background overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
@@ -133,27 +145,25 @@ export default function Nav() {
               onClick={() => setMenuOpen(false)}
             />
 
-            {/* Sliding mobile menu */}
             <motion.nav
               key="mobileMenu"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", stiffness: 100, damping: 18 }}
-              className="fixed top-0 right-0 h-full w-3/4 sm:w-1/2 bg-white shadow-2xl z-50 flex flex-col py-8 px-6"
+              transition={{ type: "spring", stiffness: 120, damping: 18 }}
+              className="fixed top-0 right-0 h-full w-3/4 sm:w-1/2 bg-white/30 backdrop-blur-2xl border-l border-white/20 shadow-2xl z-50 flex flex-col py-8 px-6"
             >
               <div className="flex items-center justify-between mb-8">
-                <Logo size={40} mode="icon" />
+                <Logo size={48} mode="icon" />
                 <button
-                  className="text-taa-primary"
+                  className="text-taa-primary hover:text-taa-accent"
                   onClick={() => setMenuOpen(false)}
                   aria-label="Close menu"
                 >
-                  <X size={28} />
+                  <X size={32} />
                 </button>
               </div>
 
-              {/* Mobile Nav Links */}
               <div className="flex flex-col gap-6 text-lg font-medium">
                 {navLinks.map((link) => (
                   <NavLink
@@ -162,7 +172,7 @@ export default function Nav() {
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
                       isActive
-                        ? "text-taa-primary font-semibold"
+                        ? "text-taa-accent font-semibold"
                         : "text-gray-700 hover:text-taa-primary"
                     }
                   >
@@ -170,7 +180,7 @@ export default function Nav() {
                   </NavLink>
                 ))}
 
-                {/* Auth Buttons for Mobile */}
+                {/* Auth Buttons */}
                 {token ? (
                   <>
                     <NavLink
@@ -185,7 +195,7 @@ export default function Nav() {
                         handleLogout();
                         setMenuOpen(false);
                       }}
-                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg mt-4 transition"
+                      className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-full mt-4 hover:from-red-600 hover:to-red-700 shadow-md hover:shadow-lg transition-all duration-300"
                     >
                       Logout
                     </button>
@@ -195,14 +205,14 @@ export default function Nav() {
                     <Link
                       to="/login"
                       onClick={() => setMenuOpen(false)}
-                      className="w-full text-center bg-taa-primary text-white py-2 rounded-lg hover:bg-taa-accent transition"
+                      className="w-full text-center bg-gradient-to-r from-taa-primary to-taa-accent text-white py-2 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
                     >
                       Login
                     </Link>
                     <Link
                       to="/register"
                       onClick={() => setMenuOpen(false)}
-                      className="w-full text-center border border-taa-primary text-taa-primary py-2 rounded-lg hover:bg-taa-primary hover:text-white transition"
+                      className="w-full text-center border border-taa-primary text-taa-primary py-2 rounded-full hover:bg-taa-primary hover:text-white transition-all duration-300"
                     >
                       Register
                     </Link>
@@ -210,10 +220,11 @@ export default function Nav() {
                 )}
               </div>
 
-              {/* Footer Info */}
-              <div className="mt-auto border-t border-gray-200 pt-6 text-sm text-gray-500">
+              <div className="mt-auto border-t border-white/30 pt-6 text-sm text-gray-600">
                 <p>© {new Date().getFullYear()} Text Africa Arcade</p>
-                <p className="text-taa-accent mt-1">Digital Innovation Hub</p>
+                <p className="text-taa-accent mt-1 font-medium">
+                  Digital Innovation Hub
+                </p>
               </div>
             </motion.nav>
           </>
