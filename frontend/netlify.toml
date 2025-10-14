@@ -1,0 +1,8 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "frontend/build"
+
+# Optional: disable all Netlify extensions (fixes "You are not permitted" error)
+[build.environment]
+  NETLIFY_USE_BUILD_BOT = "true"
