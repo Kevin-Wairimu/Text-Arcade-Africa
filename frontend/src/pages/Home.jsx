@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
+
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Hero from "../components/Hero";
@@ -10,7 +11,6 @@ const API_BASE_URL =
   (window.location.hostname === "localhost"
     ? "https://65a0bb6462df.ngrok-free.app"
     : "https://text-arcade-africa.onrender.com");
-// production (Render)
 
 // ✅ Axios instance
 const API = axios.create({
@@ -18,13 +18,13 @@ const API = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// ✅ Animation config
+// ✅ Simplified animation config
 const fadeIn = {
-  hidden: { opacity: 0, y: 40 },
+  hidden: { opacity: 0, y: 20 },
   visible: (i = 1) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.15, duration: 0.7, ease: "easeOut" },
+    transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" },
   }),
 };
 
@@ -51,6 +51,51 @@ function formatRelativeTime(date) {
     : published.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
+// ✅ Memoized Article Card component
+const ArticleCard = React.memo(({ article, index, onReadMore }) => {
+  const content = typeof article.content === "string" ? article.content : "";
+  const title = article.title || "Untitled Article";
+  const image = article.image || "https://via.placeholder.com/400x200?text=No+Image";
+  const category = article.category || "General";
+  const publishedAt = article.publishedAt || new Date().toISOString();
+
+  return (
+    <motion.div
+      key={article._id || index}
+      custom={index}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true }}
+      variants={fadeIn}
+      className="bg-white rounded-2xl shadow-md hover:shadow-lg transition duration-200 overflow-hidden flex flex-col"
+    >
+      <img
+        src={image}
+        alt={title}
+        className="w-full h-48 object-cover"
+        loading="lazy"
+      />
+      <div className="p-5 flex flex-col flex-grow">
+        <div className="text-sm text-taa-accent">
+          {category} • {formatRelativeTime(publishedAt)}
+        </div>
+        <h3 className="font-semibold text-lg mt-2 text-gray-900 line-clamp-2 flex-grow">
+          {title}
+        </h3>
+        <p className="text-gray-600 mt-2 text-sm line-clamp-3">
+          {content.slice(0, 120) || "No content available..."}
+        </p>
+        <button
+          onClick={() => onReadMore(article._id)}
+          className="mt-4 text-taa-primary hover:text-taa-accent font-medium text-sm self-start"
+        >
+          Read More →
+        </button>
+      </div>
+    </motion.div>
+  );
+});
+
 export default function Home() {
   const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
@@ -68,8 +113,8 @@ export default function Home() {
     window.scrollTo(0, 0);
   }, []);
 
-  // ✅ Fetch articles from backend
-  const fetchArticles = useCallback(async (cat, search) => {
+  // ✅ Fetch articles with pagination
+  const fetchArticles = useCallback(async (cat, search, pageNum = 1) => {
     setIsLoading(true);
     setError("");
 
@@ -77,13 +122,32 @@ export default function Home() {
       const params = new URLSearchParams();
       if (cat !== "All") params.append("category", cat);
       if (search) params.append("search", search);
+      params.append("page", pageNum);
+      params.append("limit", limit);
 
       const { data } = await API.get(`/articles?${params.toString()}`);
       console.log("✅ Articles fetched:", data);
 
       if (data && Array.isArray(data.articles)) {
-        setArticles(data.articles);
-        setTotalArticles(data.total || data.articles.length);
+        let filteredArticles = data.articles;
+        // ✅ Client-side category filtering
+        if (cat !== "All") {
+          const categoryLower = cat.toLowerCase();
+          filteredArticles = data.articles.filter(
+            (article) => article.category?.toLowerCase() === categoryLower
+          );
+        }
+        // ✅ Client-side search filtering
+        if (search && cat === "All") {
+          const searchLower = search.toLowerCase();
+          filteredArticles = filteredArticles.filter(
+            (article) =>
+              article.title?.toLowerCase().includes(searchLower) ||
+              article.category?.toLowerCase().includes(searchLower)
+          );
+        }
+        setArticles((prev) => (pageNum === 1 ? filteredArticles : [...prev, ...filteredArticles]));
+        setTotalArticles(data.total || filteredArticles.length);
       } else {
         setArticles([]);
         setError("No articles found.");
@@ -95,35 +159,43 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [limit]);
 
-  // ✅ Re-fetch when filters/search change
+  // ✅ Re-fetch on category/search change
   useEffect(() => {
     const delay = setTimeout(() => {
       setPage(1);
-      fetchArticles(category, searchTerm);
-    }, 400);
+      fetchArticles(category, searchTerm, 1);
+    }, 300); // Reduced debounce time
     return () => clearTimeout(delay);
   }, [category, searchTerm, fetchArticles]);
 
+  // ✅ Fetch more articles on "Load More"
+  useEffect(() => {
+    if (page > 1) {
+      fetchArticles(category, searchTerm, page);
+    }
+  }, [page, category, searchTerm, fetchArticles]);
+
   // ✅ UI handlers
-  const handleCategoryClick = (cat) => setCategory(cat);
-  const handleSearchChange = (e) => setSearchTerm(e.target.value);
-  const handleClearFilters = () => {
+  const handleCategoryClick = useCallback((cat) => setCategory(cat), []);
+  const handleSearchChange = useCallback((e) => setSearchTerm(e.target.value), []);
+  const handleClearFilters = useCallback(() => {
     setCategory("All");
     setSearchTerm("");
-  };
-  const handleLoadMore = () => setPage((p) => p + 1);
-
-  const handleReadMore = (id) => {
+  }, []);
+  const handleLoadMore = useCallback(() => setPage((p) => p + 1), []);
+  const handleReadMore = useCallback((id) => {
     const token = localStorage.getItem("token");
     if (!token) navigate("/login");
     else navigate(`/article/${id}`);
-  };
+  }, [navigate]);
 
-  // ✅ Prevent crash
-  const safeArticles = Array.isArray(articles) ? articles : [];
-  const visibleArticles = safeArticles.slice(0, page * limit);
+  // ✅ Memoized visible articles
+  const visibleArticles = useMemo(() => {
+    const safeArticles = Array.isArray(articles) ? articles : [];
+    return safeArticles.slice(0, page * limit);
+  }, [articles, page, limit]);
 
   return (
     <main className="bg-gradient-to-b from-white via-emerald-50 to-white text-gray-800 pt-20 md:pt-24 min-h-screen">
@@ -137,7 +209,9 @@ export default function Home() {
           variants={fadeIn}
           className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-taa-dark"
         >
-          {category === "All" && !searchTerm ? "Latest News & Insights" : "Filtered Results"}
+          {category === "All" && !searchTerm
+            ? "Latest News & Insights"
+            : `Results for ${category === "All" ? `"${searchTerm}"` : category}`}
         </motion.h2>
 
         {/* Category Filters */}
@@ -161,7 +235,7 @@ export default function Home() {
         <div className="flex justify-center items-center gap-4 mt-6 sm:mt-8">
           <input
             type="text"
-            placeholder="Search all articles..."
+            placeholder="Search by title or category..."
             value={searchTerm}
             onChange={handleSearchChange}
             className="w-full sm:w-2/3 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-taa-accent"
@@ -178,51 +252,21 @@ export default function Home() {
 
         {/* Articles Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mt-8 sm:mt-12">
-          {isLoading ? (
+          {isLoading && page === 1 ? (
             <p className="text-center text-gray-600 col-span-full">Loading articles...</p>
           ) : error ? (
             <p className="text-center text-red-600 col-span-full">{error}</p>
           ) : visibleArticles.length === 0 ? (
             <p className="text-center text-gray-600 col-span-full">No matching articles found.</p>
           ) : (
-            visibleArticles.map((a, i) => {
-              const content = typeof a.content === "string" ? a.content : "";
-              const title = a.title || "Untitled Article";
-              const image = a.image || "https://via.placeholder.com/400x200?text=No+Image";
-              const category = a.category || "General";
-              const publishedAt = a.publishedAt || new Date().toISOString();
-
-              return (
-                <motion.div
-                  key={a._id || i}
-                  custom={i}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  variants={fadeIn}
-                  className="bg-white rounded-2xl shadow-md hover:shadow-lg transition duration-200 overflow-hidden flex flex-col"
-                >
-                  <img src={image} alt={title} className="w-full h-48 object-cover" />
-                  <div className="p-5 flex flex-col flex-grow">
-                    <div className="text-sm text-taa-accent">
-                      {category} • {formatRelativeTime(publishedAt)}
-                    </div>
-                    <h3 className="font-semibold text-lg mt-2 text-gray-900 line-clamp-2 flex-grow">
-                      {title}
-                    </h3>
-                    <p className="text-gray-600 mt-2 text-sm line-clamp-3">
-                      {content.slice(0, 120) || "No content available..."}
-                    </p>
-                    <button
-                      onClick={() => handleReadMore(a._id)}
-                      className="mt-4 text-taa-primary hover:text-taa-accent font-medium text-sm self-start"
-                    >
-                      Read More →
-                    </button>
-                  </div>
-                </motion.div>
-              );
-            })
+            visibleArticles.map((article, i) => (
+              <ArticleCard
+                key={article._id || i}
+                article={article}
+                index={i}
+                onReadMore={handleReadMore}
+              />
+            ))
           )}
         </div>
 
