@@ -1,3 +1,4 @@
+
 import axios from "axios";
 
 // Determine baseURL based on environment
@@ -16,18 +17,13 @@ console.log(`📡 API baseURL set to: ${baseURL}`);
 // Create Axios instance
 const API = axios.create({
   baseURL,
-  timeout: 10000,
-  withCredentials: true, // Ensure cookies/session if needed
+  timeout: 15000, // Match previous timeout
+  withCredentials: true, // Align with server.js credentials: true
 });
 
-// Request interceptor (for debugging and headers)
+// Request interceptor
 API.interceptors.request.use(
   (config) => {
-    // 🧠 Normalize URL paths — remove double `/api` if accidentally included
-    if (config.url.startsWith("/api/")) {
-      config.url = config.url.replace(/^\/api/, "");
-    }
-
     console.log(`📡 Sending ${config.method.toUpperCase()} request to ${config.baseURL}${config.url}`);
     return config;
   },
@@ -39,17 +35,27 @@ API.interceptors.request.use(
 
 // Response interceptor
 API.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`✅ Response from ${response.config.url}:`, response.data);
+    return response;
+  },
   (error) => {
     const { config, response } = error;
     console.error(`❌ Response error from ${config?.baseURL}${config?.url}:`, {
       status: response?.status,
       data: response?.data,
+      message: error.message,
     });
 
-    // Graceful message if server not reachable
+    // Specific error messages
     if (!response) {
-      console.error("⚠️ Server not reachable or CORS blocked.");
+      console.warn("⚠️ Network error or CORS issue. Check backend CORS for OPTIONS /api/contact.");
+    } else if (response.status === 404) {
+      console.error("⚠️ Endpoint not found. Verify /api/contact POST handler.");
+    } else if (response.status === 400) {
+      console.error("⚠️ Bad request. Check payload: ", config.data);
+    } else if (response.status === 403) {
+      console.error("⚠️ Forbidden. Check CORS credentials or authentication.");
     }
 
     return Promise.reject(error);

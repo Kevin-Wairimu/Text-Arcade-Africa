@@ -1,28 +1,97 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import API from "../utils/api";
-import { useAlert } from "../context/AlertContext"; // Import the alert hook
+import axios from "axios";
+import { useAlert } from "../context/AlertContext";
+
+// ✅ Base API URL (no duplicate /api)
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (window.location.hostname === "localhost"
+    ? "http://localhost:5000"
+    : "https://text-arcade-africa.onrender.com");
+
+// ✅ Axios instance
+const API = axios.create({
+  baseURL: `${API_BASE_URL}/api`,
+  headers: { "Content-Type": "application/json" },
+  timeout: 20000,
+});
 
 export default function Contact() {
-  const { showAlert } = useAlert(); // Use the hook
+  const { showAlert } = useAlert();
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({ name: "", email: "", message: "" });
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      // Use the new, correct API endpoint
-      const { data } = await API.post("/api/contact", form);
-      showAlert(data.message, "success"); // Use the themed alert
-      setForm({ name: "", email: "", message: "" }); // Clear form on success
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || "Failed to send message.";
-      showAlert(errorMessage, "error"); // Use the themed error alert
-    } finally {
-      setLoading(false);
+  const validateForm = useCallback(() => {
+    const newErrors = { name: "", email: "", message: "" };
+    let isValid = true;
+
+    if (!form.name.trim()) {
+      newErrors.name = "Name is required";
+      isValid = false;
     }
-  }
+    if (!form.email.trim()) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      newErrors.email = "Invalid email format";
+      isValid = false;
+    }
+    if (!form.message.trim()) {
+      newErrors.message = "Message is required";
+      isValid = false;
+    } else if (form.message.length < 10) {
+      newErrors.message = "Message must be at least 10 characters";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  }, [form]);
+
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!validateForm()) {
+        showAlert("Please fix the form errors.", "error");
+        return;
+      }
+
+      setLoading(true);
+
+      const sendRequest = async (attempt = 1) => {
+        try {
+          const { data } = await API.post("/contact", form);
+          console.log("✅ Contact form response:", data);
+          showAlert(data.message || "Message sent successfully!", "success");
+          setForm({ name: "", email: "", message: "" });
+          setErrors({ name: "", email: "", message: "" });
+        } catch (err) {
+          console.error(`❌ Contact form error (attempt ${attempt}):`, err);
+
+          const errorMessage =
+            err.code === "ECONNABORTED"
+              ? "Request timed out. Please try again."
+              : err.response?.data?.message ||
+                "Failed to send message. Please try again later.";
+
+          if (err.code === "ECONNABORTED" && attempt < 2) {
+            console.warn("Retrying contact request due to timeout...");
+            await sendRequest(attempt + 1);
+            return;
+          }
+
+          showAlert(errorMessage, "error");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      await sendRequest();
+    },
+    [form, showAlert, validateForm]
+  );
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-emerald-50 to-white pt-20 md:pt-24">
@@ -37,7 +106,7 @@ export default function Contact() {
             Get in Touch
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto mb-12">
-            Let's talk about partnerships, projects, or digital transformation for
+            Let’s talk about partnerships, projects, or digital transformation for
             your newsroom. We're here to help.
           </p>
         </motion.div>
@@ -51,31 +120,55 @@ export default function Contact() {
           className="bg-white/60 backdrop-blur-lg p-8 rounded-2xl shadow-lg max-w-2xl mx-auto border border-white/50"
         >
           <div className="grid gap-5">
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              className="w-full p-3 rounded-lg bg-emerald-50/30 text-emerald-900 placeholder-emerald-800/60 border border-white/20 backdrop-blur-md transition duration-200 focus:bg-white/30 focus:ring-2 focus:ring-taa-primary focus:outline-none"
-            />
-            <input
-              type="email"
-              placeholder="Email Address"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-              className="w-full p-3 rounded-lg bg-emerald-50/30 text-emerald-900 placeholder-emerald-800/60 border border-white/20 backdrop-blur-md transition duration-200 focus:bg-white/30 focus:ring-2 focus:ring-taa-primary focus:outline-none"
-            />
-            <textarea
-              placeholder="Your Message"
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
-              required
-              rows={5}
-              className="w-full p-3 rounded-lg bg-emerald-50/30 text-emerald-900 placeholder-emerald-800/60 border border-white/20 resize-none backdrop-blur-md transition duration-200 focus:bg-white/30 focus:ring-2 focus:ring-taa-primary focus:outline-none"
-            />
+            <div>
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                className={`w-full p-3 rounded-lg bg-emerald-50/30 text-emerald-900 placeholder-emerald-800/60 border ${
+                  errors.name ? "border-red-500" : "border-white/20"
+                } backdrop-blur-md transition duration-200 focus:bg-white/30 focus:ring-2 focus:ring-taa-primary focus:outline-none`}
+              />
+              {errors.name && (
+                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+              )}
+            </div>
+
+            <div>
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+                className={`w-full p-3 rounded-lg bg-emerald-50/30 text-emerald-900 placeholder-emerald-800/60 border ${
+                  errors.email ? "border-red-500" : "border-white/20"
+                } backdrop-blur-md transition duration-200 focus:bg-white/30 focus:ring-2 focus:ring-taa-primary focus:outline-none`}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <textarea
+                placeholder="Your Message"
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                required
+                rows={5}
+                className={`w-full p-3 rounded-lg bg-emerald-50/30 text-emerald-900 placeholder-emerald-800/60 border ${
+                  errors.message ? "border-red-500" : "border-white/20"
+                } resize-none backdrop-blur-md transition duration-200 focus:bg-white/30 focus:ring-2 focus:ring-taa-primary focus:outline-none`}
+              />
+              {errors.message && (
+                <p className="text-red-500 text-sm mt-1">{errors.message}</p>
+              )}
+            </div>
           </div>
+
           <button
             type="submit"
             disabled={loading}

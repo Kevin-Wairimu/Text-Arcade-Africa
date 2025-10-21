@@ -1,8 +1,11 @@
-const express = require('express');
+// routes/contactRoutes.js
+const express = require("express");
 const router = express.Router();
-const contactController = require('../controllers/contactController');
+const { sendContactMessage } = require("../controllers/contactController");
 
-// Define the route: POST /api/contact
-router.post('/', contactController.sendContactMessage);
+console.log("SERVER: Setting up contact routes...");
+
+// ✅ POST /api/contact
+router.post("/", sendContactMessage);
 
 module.exports = router;
