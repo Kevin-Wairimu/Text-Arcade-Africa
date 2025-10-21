@@ -5,3 +5,8 @@
 
 [build.environment]
   NETLIFY_USE_BUILD_BOT = "true"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
