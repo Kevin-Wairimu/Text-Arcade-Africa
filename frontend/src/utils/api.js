@@ -10,7 +10,7 @@ const baseURL =
   window.ENV?.REACT_APP_API_URL ||
   (isProduction
     ? "https://text-arcade-africa.onrender.com/api" // Production backend
-    : "http://localhost:5000/api"); // Local backend
+    : "http://localhost:5000/"); // Local backend
 
 console.log(`📡 API baseURL set to: ${baseURL}`);
 
