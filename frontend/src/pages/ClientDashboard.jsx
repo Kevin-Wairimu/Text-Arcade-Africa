@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import API from "../utils/api"; // Use the central API instance
+import API from "../utils/api";
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -9,9 +9,19 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
+
   const name = localStorage.getItem("userName") || "Valued Client";
 
-  const categories = ["All", "Politics", "Business", "Technology", "Sports", "Health", "Entertainment", "General"];
+  const categories = [
+    "All",
+    "Politics",
+    "Business",
+    "Technology",
+    "Sports",
+    "Health",
+    "Entertainment",
+    "General",
+  ];
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -30,37 +40,61 @@ export default function ClientDashboard() {
     try {
       setLoading(true);
       setError(null);
-      // Use the consistent API instance
+
+      console.log("🌐 Fetching articles from:", API.defaults.baseURL);
+
       const { data } = await API.get("/api/articles");
 
-      // --- FIX: DEFENSIVE DATA HANDLING ---
-      // Your backend returns an object { articles: [], total: 0 }. We need data.articles.
-      // We also check if it's an array to prevent crashes.
-      const articlesArray = Array.isArray(data.articles) ? data.articles : [];
-      setArticles(articlesArray);
+      // Defensive handling: ensure data.articles exists and is an array
+      const articlesArray = Array.isArray(data.articles)
+        ? data.articles
+        : Array.isArray(data)
+        ? data
+        : [];
 
+      // Filter out invalid articles (e.g., missing required fields)
+      const validArticlesArray = articlesArray.filter(
+        (article) =>
+          article &&
+          typeof article === "object" &&
+          article._id &&
+          typeof article.title === "string" &&
+          typeof article.content === "string" // Ensure content is a string
+      );
+
+      console.log("✅ Valid articles fetched:", validArticlesArray.length);
+
+      setArticles(validArticlesArray);
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError(err.message || "Failed to load articles.");
+      console.error("❌ Failed to fetch articles:", err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to load articles. Please try again later."
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  // --- SAFEGUARD: ENSURE `articles` IS ALWAYS AN ARRAY ---
-  // This prevents crashes even if the state somehow becomes invalid.
   const validArticles = Array.isArray(articles) ? articles : [];
 
   const filteredArticles =
     selectedCategory === "All"
       ? validArticles
-      : validArticles.filter((article) => article.category === selectedCategory);
+      : validArticles.filter(
+          (article) =>
+            article.category?.toLowerCase() ===
+            selectedCategory.toLowerCase()
+        );
 
   const featuredArticles = filteredArticles.slice(0, 3);
   const recentArticles = filteredArticles.slice(3, 6);
 
+  // ===============================
+  // LOADING STATE
+  // ===============================
   if (loading) {
-    // ... (no changes to loading JSX)
     return (
       <main className="min-h-screen bg-gradient-to-br from-[var(--taa-primary)] to-[var(--taa-accent)] flex items-center justify-center px-4">
         <div className="text-center">
@@ -77,8 +111,10 @@ export default function ClientDashboard() {
     );
   }
 
+  // ===============================
+  // ERROR STATE
+  // ===============================
   if (error) {
-    // ... (no changes to error JSX)
     return (
       <main className="min-h-screen bg-gradient-to-br from-[var(--taa-primary)] to-[var(--taa-accent)] flex items-center justify-center px-4">
         <div className="text-center max-w-md bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
@@ -105,8 +141,10 @@ export default function ClientDashboard() {
     );
   }
 
+  // ===============================
+  // MAIN DASHBOARD
+  // ===============================
   return (
-    // ... (no changes to the main return JSX)
     <div className="min-h-screen bg-gradient-to-br from-white via-[var(--taa-light)] to-[var(--taa-accent)] pt-20 md:pt-24">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <motion.section
@@ -123,6 +161,7 @@ export default function ClientDashboard() {
           </p>
         </motion.section>
 
+        {/* CATEGORY FILTER */}
         <section className="mb-6 sm:mb-8">
           <h2 className="text-lg sm:text-xl font-semibold text-[var(--taa-dark)] mb-4">
             Filter by Category
@@ -146,6 +185,7 @@ export default function ClientDashboard() {
           </div>
         </section>
 
+        {/* FEATURED ARTICLES */}
         {featuredArticles.length > 0 && (
           <motion.section
             initial={{ opacity: 0, y: 20 }}
@@ -172,16 +212,19 @@ export default function ClientDashboard() {
                   )}
                   <div className="p-4 sm:p-6">
                     <span className="inline-block bg-[var(--taa-accent)]/20 text-[var(--taa-accent)] text-xs px-2 py-1 rounded-full mb-3 font-medium">
-                      {article.category}
+                      {article.category || "General"}
                     </span>
                     <h3 className="text-base sm:text-lg font-semibold text-[var(--taa-dark)] mb-2 line-clamp-2">
                       {article.title}
                     </h3>
                     <p className="text-[var(--taa-dark)]/70 text-xs sm:text-sm mb-4 line-clamp-3">
-                      {article.content.substring(0, 150)}...
+                      {typeof article.content === "string"
+                        ? article.content.substring(0, 150)
+                        : "No content available"}
+                      ...
                     </p>
                     <div className="flex items-center justify-between text-xs text-[var(--taa-dark)]/50">
-                      <span>By {article.author}</span>
+                      <span>By {article.author || "Anonymous"}</span>
                       <span>
                         {new Date(article.publishedAt).toLocaleDateString()}
                       </span>
@@ -199,6 +242,7 @@ export default function ClientDashboard() {
           </motion.section>
         )}
 
+        {/* RECENT ARTICLES */}
         {recentArticles.length > 0 && (
           <motion.section
             initial={{ opacity: 0, y: 20 }}
@@ -225,7 +269,7 @@ export default function ClientDashboard() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="bg-[var(--taa-accent)]/20 text-[var(--taa-accent)] text-xs px-2 py-1 rounded-full font-medium">
-                        {article.category}
+                        {article.category || "General"}
                       </span>
                       <span className="text-xs text-[var(--taa-dark)]/50">
                         {new Date(article.publishedAt).toLocaleDateString()}
@@ -235,7 +279,10 @@ export default function ClientDashboard() {
                       {article.title}
                     </h3>
                     <p className="text-[var(--taa-dark)]/70 text-xs sm:text-sm line-clamp-2 mb-2">
-                      {article.content.substring(0, 100)}...
+                      {typeof article.content === "string"
+                        ? article.content.substring(0, 100)
+                        : "No content available"}
+                      ...
                     </p>
                     <Link
                       to={`/article/${article._id}`}
@@ -250,6 +297,7 @@ export default function ClientDashboard() {
           </motion.section>
         )}
 
+        {/* EMPTY STATE */}
         {filteredArticles.length === 0 && (
           <motion.section
             initial={{ opacity: 0, scale: 0.9 }}

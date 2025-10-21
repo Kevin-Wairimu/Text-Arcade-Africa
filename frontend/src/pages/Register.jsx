@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import API from "../utils/api";
 import { useAlert } from "../context/AlertContext";
 
-// --- SVG Icon for the "Back to Home" button ---
+// --- SVG Icon for "Back to Home" button ---
 const HomeIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -25,21 +25,28 @@ const HomeIcon = () => (
 export default function Register() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
   });
+
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (form.password.length < 6) {
       return showAlert("Password must be at least 6 characters long.", "error");
     }
+
     setLoading(true);
+
     try {
+      // ✅ Corrected endpoint: /api/auth/register
       const { data } = await API.post("/api/auth/register", form);
+
       localStorage.setItem("token", data.token);
       localStorage.setItem("userName", data.user.name);
       localStorage.setItem("role", data.user.role);
@@ -58,18 +65,15 @@ export default function Register() {
         err.response?.data?.message ||
         "Registration failed. Please try again.";
       showAlert(errorMessage, "error");
+    } finally {
       setLoading(false);
     }
   };
 
   return (
     <main className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-emerald-50 to-white p-4">
-      {/* --- "Back to Home" Button --- */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-      >
+      {/* --- Back to Home Button --- */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
         <Link
           to="/"
           className="absolute top-5 right-5 flex items-center gap-2 text-sm font-medium text-taa-primary bg-white/60 backdrop-blur-md py-2 px-4 rounded-full border border-white/30 hover:bg-white/90 transition"
@@ -96,10 +100,7 @@ export default function Register() {
           Join Text Africa Arcade’s digital innovation network.
         </p>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-5 text-left relative z-10"
-        >
+        <form onSubmit={handleSubmit} className="space-y-5 text-left relative z-10">
           <input
             type="text"
             placeholder="Full Name"
@@ -135,10 +136,7 @@ export default function Register() {
 
         <p className="mt-6 text-sm text-center text-gray-600 relative z-10">
           Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-taa-accent hover:underline font-medium"
-          >
+          <Link to="/login" className="text-taa-accent hover:underline font-medium">
             Login
           </Link>
         </p>

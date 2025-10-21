@@ -1,37 +1,41 @@
 const Settings = require("../models/Settings");
 
-// ✅ Get Settings (Create default if not found)
 exports.getSettings = async (req, res) => {
   try {
-    let settings = await Settings.findOne();
+    console.log("📥 Fetching settings...");
+    const settings = await Settings.findOne().lean();
     if (!settings) {
-      settings = await Settings.create({});
+      console.log("✅ No settings found, returning defaults");
+      return res.status(200).json({
+        siteTitle: "Text Africa Arcade",
+        defaultCategory: "General",
+        theme: "light",
+      });
     }
-    res.json(settings);
+    console.log("✅ Settings found:", settings);
+    res.status(200).json(settings);
   } catch (err) {
-    console.error("Error fetching settings:", err);
-    res.status(500).json({ message: "Server error fetching settings" });
+    console.error("❌ Error fetching settings:", err.message, err.stack);
+    res.status(500).json({ error: "Failed to fetch settings", details: err.message });
   }
 };
 
-// ✅ Update Settings
 exports.updateSettings = async (req, res) => {
   try {
-    const { siteTitle, defaultCategory, theme } = req.body;
-    let settings = await Settings.findOne();
-
-    if (!settings) {
-      settings = new Settings({ siteTitle, defaultCategory, theme });
-    } else {
-      settings.siteTitle = siteTitle || settings.siteTitle;
-      settings.defaultCategory = defaultCategory || settings.defaultCategory;
-      settings.theme = theme || settings.theme;
-    }
-
-    await settings.save();
-    res.json(settings);
+    console.log("📥 Updating settings by user:", req.user?.email || "unknown", req.body);
+    const settings = await Settings.findOneAndUpdate(
+      {},
+      {
+        siteTitle: req.body.siteTitle || "Text Africa Arcade",
+        defaultCategory: req.body.defaultCategory || "General",
+        theme: req.body.theme || "light",
+      },
+      { new: true, upsert: true }
+    ).lean();
+    console.log("✅ Settings updated:", settings);
+    res.status(200).json(settings);
   } catch (err) {
-    console.error("Error updating settings:", err);
-    res.status(500).json({ message: "Server error updating settings" });
+    console.error("❌ Error updating settings:", err.message, err.stack);
+    res.status(500).json({ error: "Failed to update settings", details: err.message });
   }
 };

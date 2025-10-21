@@ -1,117 +1,85 @@
-const Article = require('../models/Article');
+const Article = require("../models/Article");
 
-// --- GET ALL ARTICLES ---
 exports.getAllArticles = async (req, res) => {
-  console.log('SERVER: getAllArticles controller hit with query:', req.query);
   try {
-    const { search, category } = req.query;
-    const query = {};
-
-    // Filter category if valid
-    if (category && category !== "All" && category.trim() !== "") {
-      query.category = category;
+    console.log("📥 GET /api/articles called by user:", req.user?.email || "unknown");
+    const articles = await Article.find().lean();
+    console.log(`✅ Found ${articles.length} articles:`, articles.map(a => a._id));
+    console.log("✅ Response sent:", JSON.stringify({ articles }, null, 2));
+    if (!articles.length) {
+      console.log("⚠️ No articles in database");
     }
-
-    // Search by title or content
-    if (search && search.trim() !== "") {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    const total = await Article.countDocuments(query);
-    const articles = await Article.find(query).sort({ publishedAt: -1 });
-
-    console.log(`SERVER: Found ${articles.length} articles out of ${total} total matches.`);
-    res.json({ success: true, total, articles });
+    res.status(200).json({ articles });
   } catch (err) {
-    console.error('SERVER ERROR fetching articles:', err);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    console.error("❌ Error fetching articles:", err.message, err.stack);
+    res.status(500).json({ error: "Failed to fetch articles", details: err.message });
   }
 };
 
-// --- GET A SINGLE ARTICLE BY ID ---
 exports.getArticleById = async (req, res) => {
-  console.log(`SERVER: getArticleById controller hit for ID: ${req.params.id}`);
   try {
-    const article = await Article.findById(req.params.id);
-    if (!article) return res.status(404).json({ message: 'Article not found' });
-    res.json(article);
+    console.log(`📥 GET /api/articles/${req.params.id} by user:`, req.user?.email || "unknown");
+    const article = await Article.findById(req.params.id).lean();
+    if (!article) {
+      console.log("❌ Article not found:", req.params.id);
+      return res.status(404).json({ error: "Article not found" });
+    }
+    console.log("✅ Article found:", article._id);
+    res.status(200).json(article);
   } catch (err) {
-    console.error('SERVER ERROR fetching single article:', err);
-    res.status(500).json({ message: 'Server Error' });
+    console.error("❌ Error fetching article:", err.message, err.stack);
+    res.status(500).json({ error: "Failed to fetch article", details: err.message });
   }
 };
 
-// --- CREATE A NEW ARTICLE ---
 exports.createArticle = async (req, res) => {
-  console.log('SERVER: createArticle controller hit.');
-  const { title, content, author, category, featured, image } = req.body;
-
-  if (!title || !content || !category)
-    return res.status(400).json({ message: 'Title, content, and category are required.' });
-
   try {
-    const newArticle = new Article({
-      title,
-      content,
-      author,
-      category,
-      featured,
-      image,
-      publishedAt: new Date()
+    console.log("📥 POST /api/articles by user:", req.user?.email || "unknown", req.body);
+    const article = new Article({
+      ...req.body,
+      publishedAt: req.body.publishedAt || new Date(),
+      views: req.body.views || 0,
     });
-
-    const article = await newArticle.save();
-    console.log('SERVER: New article saved successfully.');
+    await article.save();
+    console.log("✅ Article created:", article._id);
     res.status(201).json(article);
   } catch (err) {
-    console.error('SERVER ERROR creating article:', err);
-    res.status(500).json({ message: 'Server Error' });
+    console.error("❌ Error creating article:", err.message, err.stack);
+    res.status(500).json({ error: "Failed to create article", details: err.message });
   }
 };
 
-// --- UPDATE AN ARTICLE ---
 exports.updateArticle = async (req, res) => {
-  console.log(`SERVER: updateArticle controller hit for ID: ${req.params.id}`);
-  const { title, content, author, category, featured, image } = req.body;
-
-  if (!title || !content || !category)
-    return res.status(400).json({ message: 'Title, content, and category are required.' });
-
   try {
-    const article = await Article.findById(req.params.id);
-    if (!article) return res.status(404).json({ message: 'Article not found' });
-
-    article.title = title;
-    article.content = content;
-    article.author = author;
-    article.category = category;
-    article.featured = featured;
-    article.image = image;
-
-    const updatedArticle = await article.save();
-    console.log('SERVER: Article updated successfully.');
-    res.json(updatedArticle);
+    console.log(`📥 PUT /api/articles/${req.params.id} by user:`, req.user?.email || "unknown", req.body);
+    const article = await Article.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    }).lean();
+    if (!article) {
+      console.log("❌ Article not found:", req.params.id);
+      return res.status(404).json({ error: "Article not found" });
+    }
+    console.log("✅ Article updated:", article._id);
+    res.status(200).json(article);
   } catch (err) {
-    console.error('SERVER ERROR updating article:', err);
-    res.status(500).json({ message: 'Server Error' });
+    console.error("❌ Error updating article:", err.message, err.stack);
+    res.status(500).json({ error: "Failed to update article", details: err.message });
   }
 };
 
-// --- DELETE AN ARTICLE ---
 exports.deleteArticle = async (req, res) => {
-  console.log(`SERVER: deleteArticle controller hit for ID: ${req.params.id}`);
   try {
-    const article = await Article.findById(req.params.id);
-    if (!article) return res.status(404).json({ message: 'Article not found' });
-
-    await article.deleteOne();
-    console.log(`SERVER: Article with ID ${req.params.id} deleted.`);
-    res.json({ message: 'Article removed' });
+    console.log(`📥 DELETE /api/articles/${req.params.id} by user:`, req.user?.email || "unknown");
+    const article = await Article.findByIdAndDelete(req.params.id).lean();
+    if (!article) {
+      console.log("❌ Article not found:", req.params.id);
+      return res.status(404).json({ error: "Article not found" });
+    }
+    console.log("✅ Article deleted:", req.params.id);
+    res.status(200).json({ message: "Article deleted successfully" });
   } catch (err) {
-    console.error('SERVER ERROR deleting article:', err);
-    res.status(500).json({ message: 'Server Error' });
+    console.error("❌ Error deleting article:", err.message, err.stack);
+    res.status(500).json({ error: "Failed to delete article", details: err.message });
   }
 };
