@@ -156,6 +156,31 @@ app.get("/", (req, res) => {
   });
 });
 
+// ✅ Temporary route to verify SMTP connectivity from server
+app.get("/api/check-smtp", async (req, res) => {
+  const nodemailer = require("nodemailer");
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: parseInt(process.env.SMTP_PORT) === 465, // true for port 465
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    await transporter.verify();
+    res.json({ success: true, message: "✅ SMTP connection verified and working!" });
+  } catch (error) {
+    console.error("❌ SMTP Check Error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+
+
 // ✅ 404 handler (after all routes)
 app.use((req, res) => {
   console.log(`⚠️ Unmatched route: ${req.method} ${req.originalUrl}`);

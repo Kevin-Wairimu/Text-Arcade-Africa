@@ -1,61 +1,77 @@
-const axios = require("axios");
+import nodemailer from "nodemailer";
 
-// ✅ Contact Controller — Send contact form message using Brevo API (HTTP, not SMTP)
-exports.sendContactMessage = async (req, res) => {
+// Utility function to send an email with retry
+async function sendEmailWithRetry(transporter, mailOptions, retries = 2) {
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent successfully: ${info.messageId}`);
+  } catch (error) {
+    console.error(`❌ Email send failed: ${error.message}`);
+    if (retries > 0) {
+      console.log(`🔁 Retrying... (${2 - retries + 1})`);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      return sendEmailWithRetry(transporter, mailOptions, retries - 1);
+    }
+    throw error;
+  }
+}
+
+export const sendContactMessage = async (req, res) => {
   const { name, email, message } = req.body;
-  console.log(`📩 New contact message from ${name} (${email})`);
 
   if (!name || !email || !message) {
-    return res
-      .status(400)
-      .json({ success: false, message: "All fields are required." });
+    return res.status(400).json({
+      success: false,
+      message: "All fields are required",
+    });
   }
 
+  console.log(`📩 New contact message from ${name} (${email})`);
+
   try {
-    // ✅ Send via Brevo HTTP API
-    const response = await axios.post(
-      "https://api.brevo.com/v3/smtp/email",
-      {
-        sender: { name: "Text Africa Arcade", email: process.env.SMTP_USER },
-        to: [{ email: process.env.SMTP_USER, name: "TAA Admin" }],
-        replyTo: { email, name },
-        subject: `📬 New Contact Message from ${name}`,
-        htmlContent: `
-          <div style="font-family:Arial,sans-serif;padding:20px;background:#f9f9f9;border-radius:8px;">
-            <h2 style="color:#007b55;">New Message Received</h2>
-            <p><strong>Name:</strong> ${name}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Message:</strong></p>
-            <p style="background:#fff;padding:10px;border-radius:5px;">${message}</p>
-          </div>
-        `,
+    // ✅ Create transporter using Brevo SMTP settings
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: parseInt(process.env.SMTP_PORT) === 465, // true if using 465
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
       },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "api-key": process.env.BREVO_API_KEY,
-        },
-        timeout: 15000,
-      }
-    );
+    });
 
-    console.log("✅ Brevo email sent successfully:", response.data);
-    return res
-      .status(200)
-      .json({ success: true, message: "Message sent successfully!" });
+    // ✅ Email content
+    const mailOptions = {
+      from: `"${name}" <${email}>`,
+      to: process.env.SMTP_USER, // or your main contact inbox
+      subject: `📩 New Contact Message from ${name}`,
+      html: `
+        <div style="font-family:sans-serif; padding:10px">
+          <h2>New Contact Form Message</h2>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Message:</strong></p>
+          <blockquote style="border-left:3px solid #ccc; margin:10px 0; padding-left:10px">
+            ${message}
+          </blockquote>
+          <p>— Text Arcade Africa Contact Form</p>
+        </div>
+      `,
+    };
+
+    // ✅ Try sending email with retry logic
+    await sendEmailWithRetry(transporter, mailOptions);
+
+    // ✅ Respond only after sendMail succeeds
+    res.json({
+      success: true,
+      message: "Message sent successfully!",
+    });
   } catch (error) {
-    console.error("❌ Email sending failed:", error.message);
-
-    // Detailed error if available
-    if (error.response) {
-      console.error("Response:", error.response.data);
-    }
-
-    return res.status(500).json({
+    console.error("❌ Contact form error:", error);
+    res.status(500).json({
       success: false,
-      message:
-        error.response?.data?.message ||
-        "Failed to send your message. Please try again later.",
+      message: "Failed to send message. Please try again later.",
       error: error.message,
     });
   }
