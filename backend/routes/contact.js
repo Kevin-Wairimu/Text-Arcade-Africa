@@ -1,13 +1,16 @@
-const express = require('express')
-const router = express.Router()
+const express = require('express');
+const router = express.Router();
+const { sendContactMessage } = require('../controllers/contactController');
 
-// Simple contact endpoint - in production, hook this to email (SendGrid/Mailgun) or save to DB.
-router.post('/', async (req, res) => {
-  const { name, email, message } = req.body
-  if(!name || !email || !message) return res.status(400).json({ msg: 'Missing fields' })
-  // For now, log and respond. Replace with email send or DB storage.
-  console.log('Contact form:', { name, email, message })
-  return res.json({ msg: 'Message received' })
-})
+console.log('SERVER: Setting up contact routes...');
 
-module.exports = router
+// POST /api/contact
+router.post('/', sendContactMessage);
+
+// GET /api/contact/test
+router.get('/test', (req, res) => {
+  console.log('📡 Contact test route hit!');
+  res.json({ message: '✅ Contact route is reachable' });
+});
+
+module.exports = router;

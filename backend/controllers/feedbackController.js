@@ -1,44 +1,27 @@
 const nodemailer = require("nodemailer");
-require("dotenv").config();
 
 exports.sendFeedback = async (req, res) => {
   try {
-    console.log("SERVER: Received a new Help Request:", req.body.message);
-
     const { name, email, message } = req.body;
+    if (!message) return res.status(400).json({ error: "Message is required" });
 
-    if (!message) {
-      return res.status(400).json({ error: "Message is required" });
-    }
-
-    // ✅ Create reusable transporter with Gmail credentials from .env
     const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
     });
 
-    // ✅ Email details
-    const mailOptions = {
-      from: `"Text Africa Arcade" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER, // send to your inbox
-      subject: `Help Request / Feedback from ${name || "Anonymous"}`,
-      text: `
-Name: ${name || "N/A"}
-Email: ${email || "N/A"}
-Message: ${message}
-      `,
-    };
+    await transporter.sendMail({
+      from: `"TAA Feedback" <${process.env.SMTP_USER}>`,
+      to: process.env.SMTP_USER,
+      subject: `Feedback from ${name || "Anonymous"}`,
+      text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
+    });
 
-    // ✅ Send mail
-    await transporter.sendMail(mailOptions);
-    console.log("✅ Feedback email sent successfully!");
-
-    res.status(200).json({ success: true, message: "Feedback sent successfully" });
-  } catch (error) {
-    console.error("SERVER ERROR sending email:", error);
+    res.status(200).json({ message: "Feedback sent successfully" });
+  } catch (err) {
+    console.error("❌ Feedback error:", err);
     res.status(500).json({ error: "Failed to send feedback" });
   }
 };

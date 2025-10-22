@@ -18,14 +18,14 @@ const settingsRoutes = require("./routes/settingsRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ Allowed origins
+// Allowed origins
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://text-africa-arcade.netlify.app",
 ];
 
-// ✅ CORS setup
+// CORS setup
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -45,7 +45,7 @@ app.use(
   })
 );
 
-// ✅ Handle all OPTIONS preflights
+// Handle all OPTIONS preflights
 app.options("*", (req, res) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin) || !origin) {
@@ -64,23 +64,34 @@ app.options("*", (req, res) => {
   }
 });
 
-// ✅ Request logger
+// Request logger
 app.use((req, res, next) => {
   console.log(`📥 ${req.method} ${req.originalUrl} from ${req.headers.origin || "unknown"}`);
   next();
 });
 
+// Normalize URLs with double /api/api/
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api/api/')) {
+    console.log(`🔄 Redirecting ${req.method} ${req.originalUrl} to ${req.originalUrl.replace('/api/api/', '/api/')}`);
+    req.url = req.url.replace('/api/api/', '/api/');
+    req.originalUrl = req.originalUrl.replace('/api/api/', '/api/');
+  }
+  next();
+});
+
+// Body parsers and static files
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "Uploads")));
 
-// ✅ Debug route
+// Debug route
 app.get("/api/debug", (req, res) => {
   console.log("📥 API debug route accessed");
   res.json({ message: "API is accessible", status: "ok" });
 });
 
-// ✅ Mount actual API routes
+// Mount API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/articles", articleRoutes);
 app.use("/api", uploadRoutes);
@@ -89,19 +100,18 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/settings", settingsRoutes);
 
-// ✅ Allow direct (non-prefixed) routes for frontend calls
-// This ensures GET /users, /articles, /settings still work.
+// Non-prefixed routes for frontend calls
 app.use("/users", userRoutes);
 app.use("/articles", articleRoutes);
 app.use("/settings", settingsRoutes);
 
-
+// Test email route
 app.get("/api/test-email", async (req, res) => {
   try {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: false,
+      secure: parseInt(process.env.SMTP_PORT) === 465,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -110,22 +120,27 @@ app.get("/api/test-email", async (req, res) => {
     });
 
     await transporter.verify();
-    await transporter.sendMail({
-      from: `"TAA Test" <${process.env.SMTP_USER}>`,
-      to: process.env.SMTP_USER,
-      subject: "✅ Brevo SMTP Test from Render",
-      text: "If you received this email, Brevo SMTP works from Render.",
-    });
+    console.log("✅ SMTP connection verified");
 
-    console.log("✅ Test email sent successfully.");
-    res.json({ success: true, message: "Email test sent successfully." });
+    if (req.query.send === 'true') {
+      await transporter.sendMail({
+        from: `"TAA Test" <${process.env.SMTP_USER}>`,
+        to: process.env.SMTP_USER,
+        subject: "✅ Brevo SMTP Test from Render",
+        text: "If you received this email, Brevo SMTP works from Render.",
+      });
+      console.log("✅ Test email sent successfully");
+      res.json({ success: true, message: "Email test sent successfully" });
+    } else {
+      res.json({ success: true, message: "SMTP connection verified" });
+    }
   } catch (err) {
     console.error("❌ SMTP test error:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// ✅ Root check
+// Root health check
 app.get("/", (req, res) => {
   res.json({
     message: "✅ Backend API running on Render",
@@ -146,54 +161,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal server error", details: err.message });
 });
 
-
-// ✅ Root health check
-app.get("/", (req, res) => {
-  res.json({
-    message: "✅ Backend API running",
-    database: mongoose.connection.name,
-    status: "ok",
-  });
-});
-
-// ✅ Temporary route to verify SMTP connectivity from server
-app.get("/api/check-smtp", async (req, res) => {
-  const nodemailer = require("nodemailer");
-
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: parseInt(process.env.SMTP_PORT) === 465, // true for port 465
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.verify();
-    res.json({ success: true, message: "✅ SMTP connection verified and working!" });
-  } catch (error) {
-    console.error("❌ SMTP Check Error:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-
-
-// ✅ 404 handler (after all routes)
-app.use((req, res) => {
-  console.log(`⚠️ Unmatched route: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` });
-});
-
-// ✅ Error middleware
-app.use((err, req, res, next) => {
-  console.error(`❌ Server error: ${err.message}`, err.stack);
-  res.status(500).json({ error: "Internal server error", details: err.message });
-});
-
-// ✅ Database connection
+// Database connection
 mongoose.set("strictQuery", true);
 const dbURI = process.env.MONGO_URI;
 
