@@ -119,23 +119,26 @@ app.get("/api/test-email", async (req, res) => {
       tls: { rejectUnauthorized: false },
     });
 
-    await transporter.verify();
-    console.log("✅ SMTP connection verified");
+    const verification = await transporter.verify();
+    console.log("✅ SMTP connection verified:", verification);
 
-    if (req.query.send === 'true') {
-      await transporter.sendMail({
+    if (req.query.send === "true") {
+      const mailOptions = {
         from: `"TAA Test" <${process.env.SMTP_USER}>`,
-        to: process.env.SMTP_USER,
+        to: process.env.CONTACT_RECEIVER || process.env.SMTP_USER || "your-personal-email@example.com",
         subject: "✅ Brevo SMTP Test from Render",
         text: "If you received this email, Brevo SMTP works from Render.",
-      });
-      console.log("✅ Test email sent successfully");
+        replyTo: "test@example.com",
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log("✅ Test email sent:", { ...mailOptions, messageId: info.messageId });
       res.json({ success: true, message: "Email test sent successfully" });
     } else {
       res.json({ success: true, message: "SMTP connection verified" });
     }
   } catch (err) {
-    console.error("❌ SMTP test error:", err);
+    console.error("❌ SMTP test error:", err.message, err.stack);
     res.status(500).json({ success: false, error: err.message });
   }
 });

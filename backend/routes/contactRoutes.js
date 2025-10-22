@@ -10,10 +10,10 @@ router.post("/", async (req, res) => {
 
   console.log("📥 Contact form payload:", { name, email, message });
 
-  // Validate all fields
-  if (!name || !email || !message) {
+  // Validate required fields
+  if (!email || !message) {
     console.log("❌ Missing required fields in contact form");
-    return res.status(400).json({ success: false, message: "All fields are required" });
+    return res.status(400).json({ success: false, message: "Email and message are required" });
   }
 
   // Respond immediately
@@ -40,9 +40,8 @@ router.post("/", async (req, res) => {
       const mailOptions = {
         from: `"Text Arcade Africa" <${process.env.SMTP_USER}>`,
         to: process.env.CONTACT_RECEIVER || process.env.SMTP_USER || "your-personal-email@example.com",
-        subject: `Contact Form Submission from ${name}`,
-        text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
-        // Add reply-to for Gmail compatibility
+        subject: `Contact Form Submission${name ? ` from ${name}` : ""}`,
+        text: `Name: ${name || "N/A"}\nEmail: ${email}\nMessage: ${message}`,
         replyTo: email,
       };
 
