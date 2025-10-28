@@ -1,26 +1,10 @@
-/**
- * Admin.jsx
- *
- * Fully responsive Admin Dashboard component (single-file).
- * - Keeps your original logic and API calls intact
- * - Improves responsiveness and visibility across mobile/tablet/desktop/large screens
- * - Uses TailwindCSS classes only (no external CSS files)
- *
- * Drop this into your React project (replace your existing Admin.jsx).
- *
- * Notes:
- * - Assumes `API` configured axios instance is available at ../utils/api
- * - Uses `browser-image-compression` and `framer-motion` (you already had those)
- * - Keeps routes & behavior unchanged (login redirect, token in localStorage, etc.)
- *
- * This file is intentionally verbose and explicit so it remains self-contained.
- */
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../utils/api";
 import imageCompression from "browser-image-compression";
 import { motion } from "framer-motion";
+
 
 /* -----------------------
    Animation config
@@ -38,13 +22,15 @@ const fadeIn = {
    Category options
    ----------------------- */
 const categories = [
-  "Politics",
-  "Business",
-  "Technology",
-  "Sports",
-  "Health",
-  "Entertainment",
-  "General",
+    "Media Review",
+    "Expert Insights",
+    "Reflections",
+    "Technology",
+    "Events",
+    "Digests",
+    "Innovation",
+    "Expert View",
+    "Trends",
 ];
 
 /* -----------------------

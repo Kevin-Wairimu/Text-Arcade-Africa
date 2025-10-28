@@ -6,7 +6,16 @@
 [build.environment]
   NETLIFY_USE_BUILD_BOT = "true"
 
+[functions]
+  directory = "netlify/functions"  # Folder for serverless functions
+
 [[redirects]]
-  from = "/*"
+  from = "/api/*"  # Route API requests to functions
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"  # Fallback for frontend SPA
   to = "/index.html"
   status = 200

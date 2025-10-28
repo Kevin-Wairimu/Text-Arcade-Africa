@@ -79,7 +79,7 @@ export default function About() {
             From the Founder
           </h2>
           <p className="text-gray-700 leading-relaxed max-w-3xl">
-            "As Group Managing Editor at Mediamax, Kenya, I led a team that transitioned People Daily, Kenya’s first free newspaper, to be the country’s first digital-fully content product. I am a passionate driver of digital transformation, audience advocacy, and user needs. I believe in the power of the media as a force for good and am concerned about the waning influence of legacy platforms. My vision is for TAA to be a leading partner in this transformation across Africa."
+            "As Group Managing Editor at Mediamax, Kenya, I led a team that transitioned People Daily, Kenya’s first free newspaper, to be the country’s first digital-fully content product. I am a passionate driver of digital transformation, audience advocacy, and user needs. I believe in the power of the media as a force for good and i am concerned about the waning influence of legacy platforms. My vision is for TAA to be a leading partner in this transformation across Africa."
           </p>
         </motion.div>
 

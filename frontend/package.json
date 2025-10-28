@@ -3,26 +3,26 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",
+    "autoprefixer": "^10.4.21",
     "axios": "^1.5.0",
     "browser-image-compression": "^2.0.2",
     "framer-motion": "^12.23.22",
     "lucide-react": "^0.545.0",
+    "postcss": "^8.5.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.18.0"
-  },
-  "devDependencies": {
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "rollup": "^4.21.1",
+    "react-router-dom": "^6.18.0",
+    "socket.io-client": "^4.8.1",
     "tailwindcss": "^3.4.13",
     "vite": "^5.0.0"
+  },
+  "devDependencies": {
+    "rollup": "^4.21.1"
   }
 }

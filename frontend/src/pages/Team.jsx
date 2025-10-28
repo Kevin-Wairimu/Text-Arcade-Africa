@@ -57,7 +57,7 @@ const team = [
     name: "Emeka-Mayaka Gekara",
     role: "CEO & Founder",
     img: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-    bio: "A leading expert in digital transformation in Africa, a member of the Kenya Editors Guild, industry speaker and trainer.",
+    bio: "A leading expert in digital transformation in Africa, a member of the Kenya Editors Guild, speech writer, media scholar, industry speaker and trainer.",
     socials: { linkedin: "#", twitter: "#" },
   },
   {
@@ -72,6 +72,7 @@ const team = [
     role: "Audience Advocacy Consultant",
     img: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
     location: "Based in Mauritius",
+    bio:"-",
     socials: { linkedin: "#", twitter: "#" },
   },
   {
@@ -85,7 +86,7 @@ const team = [
     name: "Prof Rose Onyango",
     role: "Linkages & Partnerships",
     img: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-    bio: "CEO of the Green Belt Movement.",
+    bio: "-",
     socials: { linkedin: "#", twitter: "#" },
   },
   {
@@ -99,7 +100,7 @@ const team = [
     name: "Dr Julius Bosire",
     role: "Academy Representative",
     img: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
-    bio: "Represents the Kenya Editors Guild.",
+    bio: "-",
     socials: { linkedin: "#",twitter: "#" },
   },
   {
@@ -112,6 +113,7 @@ const team = [
   {
     name: "Kizito Namulanda",
     role: "Reader Revenue Consultant",
+    bio:"-",
     img: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png",
     socials: { linkedin: "#",twitter: "#" },
   },

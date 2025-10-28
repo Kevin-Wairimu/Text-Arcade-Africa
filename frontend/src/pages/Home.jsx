@@ -1,24 +1,17 @@
-
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Hero from "../components/Hero";
 import axios from "axios";
 
-// ✅ Auto-select backend URL
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  (window.location.hostname === "localhost"
-    ? "https://65a0bb6462df.ngrok-free.app"
-    : "https://text-arcade-africa.onrender.com");
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://your-production-url.com";
 
-// ✅ Axios instance
 const API = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
 
-// ✅ Simplified animation config
+// Animation variants
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
   visible: (i = 1) => ({
@@ -28,259 +21,296 @@ const fadeIn = {
   }),
 };
 
-// ✅ Helper to show "x minutes ago"
+// Format date helper
 function formatRelativeTime(date) {
   if (!date) return "Date unavailable";
   const now = new Date();
   const published = new Date(date);
-  if (isNaN(published)) return "Date unavailable";
+  if (isNaN(published.getTime())) return "Invalid date";
 
-  const diff = now - published;
-  const sec = Math.floor(diff / 1000);
-  const min = Math.floor(sec / 60);
-  const hrs = Math.floor(min / 60);
-  const days = Math.floor(hrs / 24);
-  const weeks = Math.floor(days / 7);
+  const diffSeconds = Math.floor((now - published) / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffWeeks = Math.floor(diffDays / 7);
 
-  if (sec < 60) return "just now";
-  if (min < 60) return `${min} min${min === 1 ? "" : "s"} ago`;
-  if (hrs < 24) return `${hrs} hr${hrs === 1 ? "" : "s"} ago`;
-  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
-  return weeks < 4
-    ? `${weeks} week${weeks === 1 ? "" : "s"} ago`
+  if (diffSeconds < 60) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+  if (diffHours < 24) return `${diffHours} hr ago`;
+  if (diffDays < 7) return `${diffDays} day ago`;
+  return diffWeeks < 4
+    ? `${diffWeeks} week ago`
     : published.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-// ✅ Memoized Article Card component
-const ArticleCard = React.memo(({ article, index, onReadMore }) => {
-  const content = typeof article.content === "string" ? article.content : "";
-  const title = article.title || "Untitled Article";
-  const image = article.image || "https://via.placeholder.com/400x200?text=No+Image";
-  const category = article.category || "General";
-  const publishedAt = article.publishedAt || new Date().toISOString();
-
-  return (
-    <motion.div
-      key={article._id || index}
-      custom={index}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true }}
-      variants={fadeIn}
-      className="bg-white rounded-2xl shadow-md hover:shadow-lg transition duration-200 overflow-hidden flex flex-col"
-    >
-      <img
-        src={image}
-        alt={title}
-        className="w-full h-48 object-cover"
-        loading="lazy"
-      />
-      <div className="p-5 flex flex-col flex-grow">
-        <div className="text-sm text-taa-accent">
-          {category} • {formatRelativeTime(publishedAt)}
-        </div>
-        <h3 className="font-semibold text-lg mt-2 text-gray-900 line-clamp-2 flex-grow">
-          {title}
-        </h3>
-        <p className="text-gray-600 mt-2 text-sm line-clamp-3">
-          {content.slice(0, 120) || "No content available..."}
-        </p>
-        <button
-          onClick={() => onReadMore(article._id)}
-          className="mt-4 text-taa-primary hover:text-taa-accent font-medium text-sm self-start"
-        >
-          Read More →
-        </button>
+// Article Card
+const ArticleCard = React.memo(({ article, index, onReadMore }) => (
+  <motion.div
+    custom={index}
+    initial="hidden"
+    whileInView="visible"
+    viewport={{ once: true, amount: 0.3 }}
+    variants={fadeIn}
+    className="bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col"
+  >
+    <img
+      src={article.image || "https://via.placeholder.com/400x200?text=No+Image"}
+      alt={article.title || "Untitled Article"}
+      className="w-full h-48 object-cover rounded-t-2xl"
+      loading="lazy"
+    />
+    <div className="p-5 flex flex-col flex-grow">
+      <div className="text-sm text-taa-accent">
+        {article.category || "General"} • {formatRelativeTime(article.publishedAt)}
       </div>
-    </motion.div>
-  );
-});
+      <h3 className="font-semibold text-lg mt-2 text-gray-900 line-clamp-2 flex-grow">
+        {article.title || "Untitled Article"}
+      </h3>
+      <p className="text-gray-600 mt-2 text-sm line-clamp-3">
+        {(article.content || "No content available...").slice(0, 120)}...
+      </p>
+      <button
+        onClick={() => onReadMore(article._id)}
+        className="mt-4 text-taa-primary hover:text-taa-accent font-medium text-sm self-start"
+      >
+        Read More
+      </button>
+    </div>
+  </motion.div>
+));
+
+// ──────────────────────────────────────────────────────────────
+// CATEGORY MAP: UI Label → Exact API/DB Value (Pure JavaScript)
+// ──────────────────────────────────────────────────────────────
+const CATEGORY_MAP = {
+  All: "",
+  "Media Review": "Media Review",
+  "Expert Insights": "Expert Insights",
+  Reflections: "Reflections",
+  Technology: "Technology",
+  Events: "Events",
+  Digests: "Digests",
+  Innovation: "Innovation",
+  "Expert View": "Expert View",
+  Trends: "Trends",
+};
+
+const getApiCategory = (label) => CATEGORY_MAP[label] ?? label;
 
 export default function Home() {
   const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
-  const [category, setCategory] = useState("All");
+  const [category, setCategory] = useState("All"); // UI label
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [limit] = useState(6);
-  const [isLoading, setIsLoading] = useState(true);
   const [totalArticles, setTotalArticles] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const categories = ["All", "Politics", "Business", "Technology", "Sports", "Health", "Entertainment"];
+  // UI Category List (display labels)
+  const categories = [
+    "All",
+    "Media Review",
+    "Expert Insights",
+    "Reflections",
+    "Technology",
+    "Events",
+    "Digests",
+    "Innovation",
+    "Expert View",
+    "Trends",
+  ];
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  // ✅ Fetch articles with pagination
-  const fetchArticles = useCallback(async (cat, search, pageNum = 1) => {
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const params = new URLSearchParams();
-      if (cat !== "All") params.append("category", cat);
-      if (search) params.append("search", search);
-      params.append("page", pageNum);
-      params.append("limit", limit);
-
-      const { data } = await API.get(`/articles?${params.toString()}`);
-      console.log("✅ Articles fetched:", data);
-
-      if (data && Array.isArray(data.articles)) {
-        let filteredArticles = data.articles;
-        // ✅ Client-side category filtering
-        if (cat !== "All") {
-          const categoryLower = cat.toLowerCase();
-          filteredArticles = data.articles.filter(
-            (article) => article.category?.toLowerCase() === categoryLower
-          );
-        }
-        // ✅ Client-side search filtering
-        if (search && cat === "All") {
-          const searchLower = search.toLowerCase();
-          filteredArticles = filteredArticles.filter(
-            (article) =>
-              article.title?.toLowerCase().includes(searchLower) ||
-              article.category?.toLowerCase().includes(searchLower)
-          );
-        }
-        setArticles((prev) => (pageNum === 1 ? filteredArticles : [...prev, ...filteredArticles]));
-        setTotalArticles(data.total || filteredArticles.length);
-      } else {
+  // Fetch articles with filters
+  const fetchArticles = useCallback(
+    async (isNewSearch) => {
+      setIsLoading(true);
+      if (isNewSearch) {
         setArticles([]);
-        setError("No articles found.");
+        setPage(1);
       }
-    } catch (err) {
-      console.error("❌ Fetch error:", err);
-      setError("Failed to load articles. Please try again later.");
-      setArticles([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [limit]);
+      setError("");
 
-  // ✅ Re-fetch on category/search change
+      try {
+        const params = new URLSearchParams({
+          page: isNewSearch ? "1" : page.toString(),
+          limit: limit.toString(),
+        });
+
+        // Apply category filter
+        const apiCategory = getApiCategory(category);
+        if (category !== "All" && apiCategory) {
+          params.append("category", encodeURIComponent(apiCategory));
+        }
+
+        // Apply search term
+        if (searchTerm.trim()) {
+          params.append("search", searchTerm.trim());
+        }
+
+        const response = await API.get(`/api/articles?${params.toString()}`);
+        const { data } = response;
+
+        if (data && Array.isArray(data.articles)) {
+          setArticles((prev) =>
+            isNewSearch ? data.articles : [...prev, ...data.articles]
+          );
+          setTotalArticles(data.total || 0);
+        } else {
+          setArticles([]);
+          setTotalArticles(0);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+        if (err.code === "ERR_NETWORK") {
+          setError(
+            `Network Error: Cannot connect to the API. (Is the server at ${API_BASE_URL} running and CORS configured?)`
+          );
+        } else {
+          setError("Failed to load articles. Please try again later.");
+        }
+        setArticles([]);
+        setTotalArticles(0);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [page, limit, category, searchTerm]
+  );
+
+  // Debounced search & category change
   useEffect(() => {
-    const delay = setTimeout(() => {
-      setPage(1);
-      fetchArticles(category, searchTerm, 1);
-    }, 300); // Reduced debounce time
-    return () => clearTimeout(delay);
-  }, [category, searchTerm, fetchArticles]);
+    const debounceTimer = setTimeout(() => {
+      fetchArticles(true);
+    }, 300);
 
-  // ✅ Fetch more articles on "Load More"
+    return () => clearTimeout(debounceTimer);
+  }, [category, searchTerm]);
+
+  // Load more on page change
   useEffect(() => {
     if (page > 1) {
-      fetchArticles(category, searchTerm, page);
+      fetchArticles(false);
     }
-  }, [page, category, searchTerm, fetchArticles]);
+  }, [page]);
 
-  // ✅ UI handlers
-  const handleCategoryClick = useCallback((cat) => setCategory(cat), []);
-  const handleSearchChange = useCallback((e) => setSearchTerm(e.target.value), []);
+  // Handlers
+  const handleCategoryClick = useCallback((label) => {
+    setCategory(label);
+  }, []);
+
+  const handleSearchChange = useCallback((e) => {
+    setSearchTerm(e.target.value);
+  }, []);
+
   const handleClearFilters = useCallback(() => {
     setCategory("All");
     setSearchTerm("");
   }, []);
-  const handleLoadMore = useCallback(() => setPage((p) => p + 1), []);
-  const handleReadMore = useCallback((id) => {
-    const token = localStorage.getItem("token");
-    if (!token) navigate("/login");
-    else navigate(`/article/${id}`);
-  }, [navigate]);
 
-  // ✅ Memoized visible articles
-  const visibleArticles = useMemo(() => {
-    const safeArticles = Array.isArray(articles) ? articles : [];
-    return safeArticles.slice(0, page * limit);
-  }, [articles, page, limit]);
+  const handleLoadMore = useCallback(() => {
+    setPage((prev) => prev + 1);
+  }, []);
+
+  const handleReadMore = useCallback(
+    (id) => {
+      navigate(`/article/${id}`);
+    },
+    [navigate]
+  );
+
+  const hasMoreArticles = articles.length < totalArticles;
 
   return (
     <main className="bg-gradient-to-b from-white via-emerald-50 to-white text-gray-800 pt-20 md:pt-24 min-h-screen">
       <Hero />
-
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
         <motion.h2
+          variants={fadeIn}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          variants={fadeIn}
-          className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-taa-dark"
+          className="text-3xl md:text-4xl font-bold text-center text-taa-dark"
         >
-          {category === "All" && !searchTerm
-            ? "Latest News & Insights"
-            : `Results for ${category === "All" ? `"${searchTerm}"` : category}`}
+          Latest News & Insights
         </motion.h2>
 
-        {/* Category Filters */}
-        <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-6 sm:mt-8">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => handleCategoryClick(cat)}
-              className={`px-3 sm:px-5 py-1 sm:py-2 rounded-full font-medium text-sm sm:text-base border transition duration-200 ${
-                category === cat
-                  ? "bg-taa-accent text-white border-taa-accent"
-                  : "border-gray-300 text-gray-700 hover:bg-taa-primary hover:text-white"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        {/* Filter & Search Controls */}
+        <div className="flex flex-col items-center gap-6 mt-8">
+          <div className="flex flex-wrap justify-center gap-2">
+            {categories.map((label) => (
+              <button
+                key={label}
+                onClick={() => handleCategoryClick(label)}
+                className={`px-4 py-2 rounded-full font-medium text-sm transition-colors ${
+                  category === label
+                    ? "bg-taa-accent text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-taa-primary hover:text-white"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
-        {/* Search Bar */}
-        <div className="flex justify-center items-center gap-4 mt-6 sm:mt-8">
-          <input
-            type="text"
-            placeholder="Search by title or category..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="w-full sm:w-2/3 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-taa-accent"
-          />
-          {(category !== "All" || searchTerm) && (
-            <button
-              onClick={handleClearFilters}
-              className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm font-medium"
-            >
-              Clear
-            </button>
-          )}
+          <div className="flex w-full max-w-lg items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search by title or keyword..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-taa-accent focus:border-transparent outline-none transition"
+            />
+            {(category !== "All" || searchTerm) && (
+              <button
+                onClick={handleClearFilters}
+                className="px-4 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm font-medium transition"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Articles Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mt-8 sm:mt-12">
-          {isLoading && page === 1 ? (
-            <p className="text-center text-gray-600 col-span-full">Loading articles...</p>
+        <div className="mt-12">
+          {isLoading && articles.length === 0 ? (
+            <p className="text-center text-gray-600">Loading articles...</p>
           ) : error ? (
-            <p className="text-center text-red-600 col-span-full">{error}</p>
-          ) : visibleArticles.length === 0 ? (
-            <p className="text-center text-gray-600 col-span-full">No matching articles found.</p>
+            <div className="text-center text-red-600 bg-red-50 border border-red-200 p-4 rounded-lg max-w-2xl mx-auto">
+              {error}
+            </div>
+          ) : articles.length === 0 ? (
+            <p className="text-center text-gray-600">No articles found matching your criteria.</p>
           ) : (
-            visibleArticles.map((article, i) => (
-              <ArticleCard
-                key={article._id || i}
-                article={article}
-                index={i}
-                onReadMore={handleReadMore}
-              />
-            ))
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {articles.map((article, i) => (
+                <ArticleCard
+                  key={article._id || i}
+                  article={article}
+                  index={i}
+                  onReadMore={handleReadMore}
+                />
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Load More */}
-        {visibleArticles.length < totalArticles && !isLoading && (
-          <div className="text-center mt-10">
+        {/* Load More Button */}
+        <div className="text-center mt-12">
+          {isLoading && articles.length > 0 && (
+            <p className="text-gray-600">Loading more...</p>
+          )}
+          {hasMoreArticles && !isLoading && (
             <button
               onClick={handleLoadMore}
-              className="px-6 py-3 bg-taa-primary text-white rounded-lg hover:bg-taa-accent transition"
+              className="px-6 py-3 bg-taa-primary text-white font-semibold rounded-lg hover:bg-taa-accent transition-colors"
             >
               Load More
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </section>
     </main>
   );
