@@ -124,9 +124,13 @@ const CATEGORY_MAP = {
   All: "",
   "Media Review": "Media Review",
   "Expert Insights": "Expert Insights",
-  Reflections: "Reflections",
-  Technology: "Technology",
-  Events: "Events",
+  "Reflections": "Reflections",
+  "Technology": "Technology",
+  "Events": "Events",
+  "Digest": "Digest",
+  "Innovation": "Innovation",
+  "Expert View": "Expert View",
+  "Trends": "Trends",
 };
 const getApiCategory = (label) => CATEGORY_MAP[label] ?? label;
 

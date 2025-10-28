@@ -1,29 +1,51 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../utils/api";
 import imageCompression from "browser-image-compression";
 import { motion } from "framer-motion";
 
+// --- Animation Config ---
 const fadeIn = {
-  hidden: { opacity: 0, y: 40 },
+  hidden: { opacity: 0, y: 20 },
   visible: (i = 1) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.1, duration: 0.6, ease: "easeOut" },
+    transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" },
   }),
 };
 
+// --- Category Options ---
 const categories = [
-  "Politics",
-  "Business",
+  "Media Review",
+  "Expert Insights",
+  "Reflections",
   "Technology",
-  "Sports",
-  "Health",
-  "Entertainment",
+  "Events",
+  "Digest",
+  "Innovation",
+  "Expert View",
+  "Trends",
   "General",
 ];
 
-export default function Articles() {
+// --- Main Admin Component ---
+export default function Admin() {
+  const navigate = useNavigate();
+
+  // --- Data States ---
   const [articles, setArticles] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    featured: 0,
+    categories: {},
+    views: 0,
+  });
+  const [settings, setSettings] = useState({
+    siteTitle: "",
+    defaultCategory: "General",
+    theme: "dark",
+  });
   const [form, setForm] = useState({
     title: "",
     content: "",
@@ -32,66 +54,114 @@ export default function Articles() {
     featured: false,
     image: "",
   });
+  const [editingArticle, setEditingArticle] = useState(null);
+
+  // --- UI States ---
+  const [menuOpen, setMenuOpen] = useState(
+    () => localStorage.getItem("adminMenuOpen") || "dashboard"
+  );
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState({
+    articles: true,
+    users: true,
+    settings: true,
+  });
+  const [error, setError] = useState({ articles: "", users: "", settings: "" });
+
   const token = localStorage.getItem("token");
 
-  // Fetch all articles
-  async function fetchArticles() {
-    setLoading(true);
-    setError("");
-    try {
-      const { data } = await API.get("/articles");
-      const valid = Array.isArray(data.articles)
-        ? data.articles.filter((a) => a && a._id)
-        : [];
-      setArticles(valid);
-    } catch (err) {
-      console.error("❌ Error fetching articles:", err);
-      setError("Failed to load articles. Check your API.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  // --- Side Effects for Data Fetching & State Persistence ---
+  useEffect(() => localStorage.setItem("adminMenuOpen", menuOpen), [menuOpen]);
 
   useEffect(() => {
-    fetchArticles();
-  }, []);
-
-  // Image Upload
-  async function handleImageUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      const compressed = await imageCompression(file, { maxSizeMB: 1, useWebWorker: true });
-      const reader = new FileReader();
-      reader.onloadend = () => setForm({ ...form, image: reader.result });
-      reader.readAsDataURL(compressed);
-    } catch (err) {
-      console.error("❌ Image upload failed:", err);
-      alert("Image upload failed. Try again.");
+    if (!token) {
+      navigate("/login");
+      return;
     }
-  }
+    const fetchData = async () => {
+      if (menuOpen === "dashboard" || menuOpen === "articles")
+        await fetchArticles();
+      if (menuOpen === "users") await fetchUsers();
+      if (menuOpen === "settings") await fetchSettings();
+    };
+    fetchData();
+  }, [menuOpen, token]);
 
-  // Submit / Update
-  async function handleSubmit(e) {
+  // --- API Functions ---
+  const apiCall = async (method, url, payload, errorKey) => {
+    try {
+      const response = await API[method](url, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (err) {
+      const errorMessage = `Failed to ${errorKey}: ${
+        err.response?.data?.details || err.message
+      }`;
+      setError((prev) => ({ ...prev, [errorKey]: errorMessage }));
+      if (err.response?.status === 401) navigate("/login");
+      throw err; // Re-throw to be caught by caller
+    }
+  };
+
+  const fetchArticles = async () => {
+    setIsLoading((p) => ({ ...p, articles: true }));
+    try {
+      const data = await apiCall("get", "/articles", null, "articles");
+      const articlesArray = Array.isArray(data.articles) ? data.articles : [];
+      setArticles(articlesArray);
+      calculateStats(articlesArray);
+    } catch (err) {
+      /* Error handled in apiCall */
+    } finally {
+      setIsLoading((p) => ({ ...p, articles: false }));
+    }
+  };
+
+  const fetchUsers = async () => {
+    setIsLoading((p) => ({ ...p, users: true }));
+    try {
+      const data = await apiCall("get", "/users", null, "users");
+      setUsers(Array.isArray(data.users) ? data.users : []);
+    } catch (err) {
+      /* Error handled in apiCall */
+    } finally {
+      setIsLoading((p) => ({ ...p, users: false }));
+    }
+  };
+
+  const fetchSettings = async () => {
+    setIsLoading((p) => ({ ...p, settings: true }));
+    try {
+      const data = await apiCall("get", "/settings", null, "settings");
+      setSettings(
+        data || { siteTitle: "", defaultCategory: "General", theme: "dark" }
+      );
+    } catch (err) {
+      /* Error handled in apiCall */
+    } finally {
+      setIsLoading((p) => ({ ...p, settings: false }));
+    }
+  };
+
+  // --- Form & Action Handlers ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const payload = { ...form, author: form.author || "Text Africa Arcade" };
     try {
-      if (editingId) {
-        await API.put(`/articles/${editingId}`, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        alert("✅ Article updated successfully!");
+      if (editingArticle) {
+        await apiCall(
+          "put",
+          `/articles/${editingArticle}`,
+          payload,
+          "articles"
+        );
       } else {
-        await API.post("/articles", form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        alert("✅ Article published successfully!");
+        await apiCall("post", "/articles", payload, "articles");
       }
-      fetchArticles();
+      await fetchArticles();
       setForm({
         title: "",
         content: "",
@@ -100,210 +170,508 @@ export default function Articles() {
         featured: false,
         image: "",
       });
-      setEditingId(null);
+      setEditingArticle(null);
     } catch (err) {
-      console.error("❌ Error submitting article:", err);
-      setError(err.response?.data?.message || "Failed to save article.");
+      /* Error handled in apiCall */
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
-  // Delete
-  async function handleDelete(id) {
-    if (!window.confirm("Delete this article?")) return;
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this article permanently?")) return;
     try {
-      await API.delete(`/articles/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      fetchArticles();
-      alert("🗑️ Article deleted!");
+      await apiCall("delete", `/articles/${id}`, null, "articles");
+      await fetchArticles();
     } catch (err) {
-      console.error("❌ Error deleting:", err);
-      alert("Failed to delete article.");
+      /* Error handled in apiCall */
     }
-  }
+  };
 
-  // Edit
-  function handleEdit(article) {
-    setForm({
-      title: article.title || "",
-      content: article.content || "",
-      author: article.author || "",
-      category: article.category || "General",
-      featured: article.featured || false,
-      image: article.image || "",
-    });
-    setEditingId(article._id);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
+  const handleToggleSuspend = async (userId, currentSuspended) => {
+    if (
+      !window.confirm(
+        `${currentSuspended ? "Unsuspend" : "Suspend"} this user?`
+      )
+    )
+      return;
+    try {
+      await apiCall(
+        "put",
+        `/users/${userId}/suspend`,
+        { suspended: !currentSuspended },
+        "users"
+      );
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id === userId ? { ...u, suspended: !currentSuspended } : u
+        )
+      );
+    } catch (err) {
+      /* Error handled in apiCall */
+    }
+  };
+
+  const handleSettingsSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading((p) => ({ ...p, settings: true }));
+    try {
+      await apiCall("put", "/settings", settings, "settings");
+      alert("Settings saved!");
+    } catch (err) {
+      /* Error handled in apiCall */
+    } finally {
+      setIsLoading((p) => ({ ...p, settings: false }));
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 1,
+        useWebWorker: true,
+      });
+      const reader = new FileReader();
+      reader.onloadend = () =>
+        setForm((prev) => ({ ...prev, image: reader.result }));
+      reader.readAsDataURL(compressed);
+    } catch (err) {
+      alert("Failed to upload image.");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/");
+  };
+
+  const calculateStats = (data) => {
+    const total = data.length;
+    const featured = data.filter((a) => a.featured).length;
+    const views = data.reduce((acc, a) => acc + (a.views || 0), 0);
+    const categoriesObj = data.reduce((acc, a) => {
+      const c = a.category || "General";
+      acc[c] = (acc[c] || 0) + 1;
+      return acc;
+    }, {});
+    setStats({ total, featured, categories: categoriesObj, views });
+  };
+
+  const formattedDate = (dateString) =>
+    new Date(dateString || Date.now()).toLocaleDateString();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-emerald-50 to-white py-10 px-4 sm:px-6 md:px-10">
-      <motion.h2
-        className="text-3xl font-bold text-center text-emerald-700 mb-8"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
+    <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] text-gray-200 overflow-hidden">
+      <button
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#1E6B2B]/50 backdrop-blur-sm rounded-lg shadow-lg"
+        onClick={() => setIsSidebarOpen((s) => !s)}
+        aria-label="Toggle menu"
       >
-        📰 Manage Articles
-      </motion.h2>
+        <svg
+          className="w-6 h-6 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d={
+              isSidebarOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"
+            }
+          />
+        </svg>
+      </button>
 
-      {/* Form */}
-      <motion.form
-        onSubmit={handleSubmit}
-        variants={fadeIn}
-        initial="hidden"
-        animate="visible"
-        className="bg-white/80 backdrop-blur-md border border-emerald-100 rounded-2xl shadow-md p-6 sm:p-8 mb-10"
+      <aside
+        className={`w-72 md:w-64 bg-[#111827]/80 backdrop-blur-lg border-r border-white/10 h-screen fixed md:static z-40 flex flex-col justify-between transform transition-transform duration-300 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0`}
       >
-        <h3 className="text-xl font-semibold mb-4 text-emerald-700">
-          {editingId ? "✏️ Edit Article" : "🪶 Create New Article"}
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Title"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            required
-            className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 text-gray-800 focus:ring-2 focus:ring-emerald-400 text-sm sm:text-base"
-          />
-          <select
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-            className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 text-gray-800 focus:ring-2 focus:ring-emerald-400 text-sm sm:text-base"
-          >
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <textarea
-          placeholder="Write article content..."
-          rows={6}
-          value={form.content}
-          onChange={(e) => setForm({ ...form, content: e.target.value })}
-          required
-          className="w-full mt-4 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 text-gray-800 focus:ring-2 focus:ring-emerald-400 text-sm sm:text-base"
-        />
-
-        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="text-gray-700 text-sm sm:text-base"
-          />
-          <label className="flex items-center gap-2 text-gray-600 text-sm">
-            <input
-              type="checkbox"
-              checked={form.featured}
-              onChange={(e) => setForm({ ...form, featured: e.target.checked })}
-            />
-            Featured
-          </label>
-        </div>
-
-        {/* Image Preview */}
-        {form.image && (
-          <div className="mt-4">
-            <img
-              src={form.image}
-              alt="Preview"
-              className="rounded-xl w-full sm:w-72 h-40 object-cover shadow-sm"
-            />
-          </div>
-        )}
-
-        <div className="mt-6 flex flex-wrap gap-4">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition disabled:opacity-50"
-          >
-            {isSubmitting ? "Saving..." : editingId ? "Update Article" : "Publish Article"}
-          </button>
-          {editingId && (
+        <div className="p-6 space-y-8">
+          <h1 className="text-2xl font-bold text-[#77BFA1] text-center md:text-left">
+            Admin Panel
+          </h1>
+          <nav className="flex flex-col gap-3">
             <button
-              type="button"
               onClick={() => {
-                setForm({
-                  title: "",
-                  content: "",
-                  author: "",
-                  category: "General",
-                  featured: false,
-                  image: "",
-                });
-                setEditingId(null);
+                navigate("/");
+                setIsSidebarOpen(false);
               }}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg"
+              className="text-left py-2 px-4 rounded-lg transition hover:bg-white/5 text-gray-300"
             >
-              Cancel
+              Home
             </button>
-          )}
+            {["dashboard", "articles", "users", "settings"].map((key) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setMenuOpen(key);
+                  setIsSidebarOpen(false);
+                }}
+                className={`text-left py-2 px-4 rounded-lg transition ${
+                  menuOpen === key
+                    ? "bg-[#1E6B2B] text-white font-semibold"
+                    : "text-gray-300 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                {key.charAt(0).toUpperCase() + key.slice(1)}
+              </button>
+            ))}
+          </nav>
         </div>
-      </motion.form>
+        <div className="p-6">
+          <button
+            onClick={handleLogout}
+            className="w-full bg-red-600/80 hover:bg-red-600 text-white py-2.5 rounded-lg"
+          >
+            Logout
+          </button>
+        </div>
+      </aside>
 
-      {/* Articles List */}
-      {loading ? (
-        <p className="text-center text-gray-600">Loading articles...</p>
-      ) : error ? (
-        <p className="text-center text-red-600">{error}</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {articles.length > 0 ? (
-            articles.map((a, i) => (
+      <main className="flex-1 p-6 md:p-10 w-full overflow-y-auto">
+        <motion.h2
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-3xl font-bold mb-10 text-center md:text-left text-[#77BFA1]"
+        >
+          {menuOpen.charAt(0).toUpperCase() + menuOpen.slice(1)}
+        </motion.h2>
+
+        {menuOpen === "dashboard" && (
+          <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+            {[
+              { label: "Total Articles", value: stats.total },
+              { label: "Featured", value: stats.featured },
+              {
+                label: "Categories",
+                value: Object.keys(stats.categories).length,
+              },
+              { label: "Total Views", value: stats.views },
+            ].map((stat, i) => (
               <motion.div
-                key={a._id}
+                key={stat.label}
                 variants={fadeIn}
                 initial="hidden"
                 animate="visible"
                 custom={i}
-                className="bg-white/80 backdrop-blur-md border border-emerald-100 rounded-2xl shadow-md hover:shadow-lg transition overflow-hidden"
+                className="bg-[#0b2818]/70 backdrop-blur-lg p-6 text-center rounded-2xl border border-[#77BFA1]/30"
               >
-                {a.image && (
-                  <img
-                    src={a.image}
-                    alt={a.title}
-                    className="w-full h-40 object-cover"
-                  />
-                )}
-                <div className="p-4">
-                  <h4 className="font-semibold text-gray-800 text-base sm:text-lg line-clamp-2">
-                    {a.title}
-                  </h4>
-                  <p className="text-gray-600 text-xs sm:text-sm mt-1">
-                    {a.category} • {a.views || 0} views
-                  </p>
-                  <div className="flex justify-between mt-3">
-                    <button
-                      onClick={() => handleEdit(a)}
-                      className="text-emerald-600 hover:text-emerald-700 text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(a._id)}
-                      className="text-red-500 hover:text-red-600 text-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
+                <h3 className="text-3xl font-bold text-white">{stat.value}</h3>
+                <p className="text-gray-400 mt-1">{stat.label}</p>
               </motion.div>
-            ))
-          ) : (
-            <p className="col-span-full text-center text-gray-600">
-              No articles available.
-            </p>
-          )}
-        </div>
-      )}
+            ))}
+          </section>
+        )}
+
+        {menuOpen === "articles" && (
+          <section>
+            {error.articles && (
+              <p className="text-red-400 text-center mb-4">{error.articles}</p>
+            )}
+            <motion.form
+              onSubmit={handleSubmit}
+              variants={fadeIn}
+              initial="hidden"
+              animate="visible"
+              className="bg-[#0b2818]/70 backdrop-blur-lg border border-[#77BFA1]/30 rounded-2xl p-6 mb-8"
+            >
+              <h3 className="text-xl font-semibold mb-4 text-white">
+                {editingArticle ? "Edit Article" : "Create New Article"}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Title"
+                  value={form.title}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, title: e.target.value }))
+                  }
+                  required
+                  className="bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
+                />
+                <select
+                  value={form.category}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, category: e.target.value }))
+                  }
+                  className="bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
+                >
+                  <option value="" disabled>
+                    Select Category
+                  </option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  placeholder="Author (optional)"
+                  value={form.author}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, author: e.target.value }))
+                  }
+                  className="sm:col-span-2 bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
+                />
+                <textarea
+                  placeholder="Article content..."
+                  rows={8}
+                  value={form.content}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, content: e.target.value }))
+                  }
+                  required
+                  className="sm:col-span-2 bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
+                />
+              </div>
+              <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <input
+                  id="article-image-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="text-gray-400 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1E6B2B] file:text-white hover:file:bg-[#77BFA1]"
+                />
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={form.featured}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, featured: e.target.checked }))
+                    }
+                    className="w-4 h-4 accent-[#77BFA1]"
+                  />{" "}
+                  Featured
+                </label>
+                <div className="flex gap-2">
+                  {editingArticle && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingArticle(null);
+                        setForm({
+                          title: "",
+                          content: "",
+                          author: "",
+                          category: "General",
+                          featured: false,
+                          image: "",
+                        });
+                      }}
+                      className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="bg-[#1E6B2B] hover:bg-[#77BFA1] text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
+                  >
+                    {isSubmitting
+                      ? "Saving..."
+                      : editingArticle
+                      ? "Update"
+                      : "Publish"}
+                  </button>
+                </div>
+              </div>
+            </motion.form>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {isLoading.articles ? (
+                <p>Loading...</p>
+              ) : (
+                articles.map((a, i) => (
+                  <motion.div
+                    key={a._id}
+                    variants={fadeIn}
+                    initial="hidden"
+                    animate="visible"
+                    custom={i}
+                    className="bg-[#0b2818]/70 backdrop-blur-lg border border-[#77BFA1]/30 rounded-2xl overflow-hidden flex flex-col"
+                  >
+                    {a.image ? (
+                      <img
+                        src={a.image}
+                        alt={a.title}
+                        className="w-full h-40 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-20 bg-black/20 flex items-center justify-center text-gray-400">
+                        No image
+                      </div>
+                    )}
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-semibold text-white line-clamp-2">
+                        {a.title}
+                      </h3>
+                      <p className="text-gray-400 text-sm mt-1">
+                        {a.category} • {a.views || 0} views
+                      </p>
+                      <div className="mt-auto pt-4 flex justify-between items-center">
+                        <div className="flex gap-4">
+                          <button
+                            onClick={() => {
+                              setEditingArticle(a._id);
+                              setForm(a);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            className="text-[#77BFA1] hover:text-white text-sm"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(a._id)}
+                            className="text-red-500 hover:text-red-400 text-sm"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                        {a.featured && (
+                          <span className="text-xs font-bold text-[#77BFA1]">
+                            Featured
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </section>
+        )}
+
+        {menuOpen === "users" && (
+          <section>
+            {error.users && (
+              <p className="text-red-400 text-center mb-4">{error.users}</p>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {isLoading.users ? (
+                <p>Loading...</p>
+              ) : (
+                users.map((user, i) => (
+                  <motion.div
+                    key={user._id}
+                    variants={fadeIn}
+                    initial="hidden"
+                    animate="visible"
+                    custom={i}
+                    className="bg-[#0b2818]/70 backdrop-blur-lg border border-[#77BFA1]/30 rounded-2xl p-4 flex flex-col"
+                  >
+                    <h4 className="font-semibold text-white">
+                      {user.name || "Unnamed"}
+                    </h4>
+                    <p className="text-gray-400 text-sm">{user.email}</p>
+                    <p
+                      className={`text-sm mt-2 font-bold ${
+                        user.suspended ? "text-red-400" : "text-green-400"
+                      }`}
+                    >
+                      {user.suspended ? "SUSPENDED" : "Active"}
+                    </p>
+                    <button
+                      onClick={() =>
+                        handleToggleSuspend(user._id, user.suspended)
+                      }
+                      className={`mt-4 w-full py-2 rounded-lg font-semibold text-sm transition-all ${
+                        user.suspended
+                          ? "bg-green-600 hover:bg-green-500 text-white"
+                          : "bg-red-600 hover:bg-red-500 text-white"
+                      }`}
+                    >
+                      {user.suspended ? "Unsuspend" : "Suspend"}
+                    </button>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </section>
+        )}
+
+        {menuOpen === "settings" && (
+          <section>
+            {error.settings && (
+              <p className="text-red-400 text-center mb-4">{error.settings}</p>
+            )}
+            <motion.form
+              onSubmit={handleSettingsSubmit}
+              variants={fadeIn}
+              initial="hidden"
+              animate="visible"
+              className="bg-[#0b2818]/70 backdrop-blur-lg border border-[#77BFA1]/30 rounded-2xl p-6 max-w-2xl mx-auto"
+            >
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Site Title
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.siteTitle}
+                    onChange={(e) =>
+                      setSettings((p) => ({ ...p, siteTitle: e.target.value }))
+                    }
+                    className="bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Default Category
+                  </label>
+                  <select
+                    value={settings.defaultCategory}
+                    onChange={(e) =>
+                      setSettings((p) => ({
+                        ...p,
+                        defaultCategory: e.target.value,
+                      }))
+                    }
+                    className="bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
+                  >
+                    {categories.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Theme
+                  </label>
+                  <select
+                    value={settings.theme}
+                    onChange={(e) =>
+                      setSettings((p) => ({ ...p, theme: e.target.value }))
+                    }
+                    className="bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
+                  >
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-6">
+                <button
+                  type="submit"
+                  disabled={isLoading.settings}
+                  className="bg-[#1E6B2B] hover:bg-[#77BFA1] text-white font-semibold px-5 py-2.5 rounded-lg disabled:opacity-50"
+                >
+                  {isLoading.settings ? "Saving..." : "Save Settings"}
+                </button>
+              </div>
+            </motion.form>
+          </section>
+        )}
+      </main>
     </div>
   );
 }
