@@ -47,3 +47,12 @@ a {
   display: inline-block;
   animation: marquee 25s linear infinite;
 }
+
+/* globals.css or App.css */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

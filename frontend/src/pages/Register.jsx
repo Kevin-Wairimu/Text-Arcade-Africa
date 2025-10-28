@@ -45,7 +45,7 @@ export default function Register() {
 
     try {
       // ✅ Corrected endpoint: /api/auth/register
-      const { data } = await API.post("/api/auth/register", form);
+      const { data } = await API.post("/auth/register", form);
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("userName", data.user.name);

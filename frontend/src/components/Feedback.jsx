@@ -18,7 +18,7 @@ export default function Feedback() {
     setLoading(true);
     try {
       console.log("📤 Sending feedback...");
-      const { data } = await API.post("/api/feedback", { message });
+      const { data } = await API.post("/feedback", { message });
       console.log("✅ Feedback response:", data);
       showAlert(data.message || "Feedback sent successfully!", "success");
       setMessage("");

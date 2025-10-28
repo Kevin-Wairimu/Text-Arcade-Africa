@@ -1,17 +1,27 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  memo,
+} from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+// =================================================================
+// STEP 1: Import the Hero component
+// =================================================================
 import Hero from "../components/Hero";
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://your-production-url.com";
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "https://your-production-url.com";
 
 const API = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
 
-// Animation variants
+// --- ANIMATION VARIANTS ---
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
   visible: (i = 1) => ({
@@ -21,67 +31,95 @@ const fadeIn = {
   }),
 };
 
-// Format date helper
+// --- DATE FORMATTER ---
 function formatRelativeTime(date) {
   if (!date) return "Date unavailable";
-  const now = new Date();
   const published = new Date(date);
   if (isNaN(published.getTime())) return "Invalid date";
-
-  const diffSeconds = Math.floor((now - published) / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-  const diffWeeks = Math.floor(diffDays / 7);
-
+  const now = new Date();
+  const diffSeconds = Math.floor((now.getTime() - published.getTime()) / 1000);
   if (diffSeconds < 60) return "just now";
+  const diffMinutes = Math.floor(diffSeconds / 60);
   if (diffMinutes < 60) return `${diffMinutes} min ago`;
-  if (diffHours < 24) return `${diffHours} hr ago`;
-  if (diffDays < 7) return `${diffDays} day ago`;
-  return diffWeeks < 4
-    ? `${diffWeeks} week ago`
-    : published.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? "s" : ""} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks > 1 ? "s" : ""} ago`;
+  return published.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
-// Article Card
-const ArticleCard = React.memo(({ article, index, onReadMore }) => (
-  <motion.div
-    custom={index}
-    initial="hidden"
-    whileInView="visible"
-    viewport={{ once: true, amount: 0.3 }}
-    variants={fadeIn}
-    className="bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col"
-  >
-    <img
-      src={article.image || "https://via.placeholder.com/400x200?text=No+Image"}
-      alt={article.title || "Untitled Article"}
-      className="w-full h-48 object-cover rounded-t-2xl"
-      loading="lazy"
-    />
-    <div className="p-5 flex flex-col flex-grow">
-      <div className="text-sm text-taa-accent">
-        {article.category || "General"} • {formatRelativeTime(article.publishedAt)}
-      </div>
-      <h3 className="font-semibold text-lg mt-2 text-gray-900 line-clamp-2 flex-grow">
-        {article.title || "Untitled Article"}
-      </h3>
-      <p className="text-gray-600 mt-2 text-sm line-clamp-3">
-        {(article.content || "No content available...").slice(0, 120)}...
-      </p>
-      <button
-        onClick={() => onReadMore(article._id)}
-        className="mt-4 text-taa-primary hover:text-taa-accent font-medium text-sm self-start"
-      >
-        Read More
-      </button>
+// --- SKELETON CARD ---
+const SkeletonCard = memo(() => (
+  <div className="bg-white/90 dark:bg-[#111827]/80 backdrop-blur-sm border border-white/20 dark:border-[#1E6B2B]/20 rounded-2xl shadow-md animate-pulse flex flex-col overflow-hidden">
+    <div className="h-48 bg-gray-300 dark:bg-gray-700 rounded-t-2xl" />
+    <div className="p-5 flex flex-col flex-grow space-y-3">
+      <div className="h-4 w-32 bg-gray-300 dark:bg-gray-600 rounded" />
+      <div className="h-6 w-full bg-gray-300 dark:bg-gray-600 rounded" />
+      <div className="h-4 w-full bg-gray-300 dark:bg-gray-600 rounded" />
+      <div className="h-4 w-3/4 bg-gray-300 dark:bg-gray-600 rounded" />
     </div>
-  </motion.div>
+  </div>
 ));
+SkeletonCard.displayName = "SkeletonCard";
 
-// ──────────────────────────────────────────────────────────────
-// CATEGORY MAP: UI Label → Exact API/DB Value (Pure JavaScript)
-// ──────────────────────────────────────────────────────────────
+// --- ARTICLE CARD ---
+const ArticleCard = memo(({ article, index, onReadMore }) => {
+  const imageUrl =
+    article.image || "https://via.placeholder.com/400x200?text=No+Image";
+  return (
+    <motion.div
+      custom={index}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.3 }}
+      variants={fadeIn}
+      className="bg-white/90 dark:bg-[#111827]/80 backdrop-blur-sm border border-white/20 dark:border-[#1E6B2B]/20 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
+      onClick={() => onReadMore(article._id)}
+      role="article"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && onReadMore(article._id)}
+    >
+      <div className="relative overflow-hidden rounded-t-2xl">
+        <img
+          src={imageUrl}
+          alt={article.title || "Article image"}
+          className="w-full h-48 object-cover transition-transform duration-500 hover:scale-105"
+          loading="lazy"
+        />
+      </div>
+      <div className="p-5 flex flex-col flex-grow">
+        <div className="text-sm text-[#77BFA1] font-medium">
+          {article.category || "General"} •{" "}
+          {formatRelativeTime(article.publishedAt)}
+        </div>
+        <h3 className="font-semibold text-lg mt-2 text-gray-900 dark:text-white line-clamp-2">
+          {article.title || "Untitled Article"}
+        </h3>
+        <p className="text-gray-600 dark:text-gray-300 mt-2 text-sm line-clamp-3">
+          {(article.content || "No content available...").slice(0, 120)}...
+        </p>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onReadMore(article._id);
+          }}
+          className="mt-4 text-[#1E6B2B] hover:text-[#77BFA1] font-medium text-sm self-start transition-colors"
+        >
+          Read More
+        </button>
+      </div>
+    </motion.div>
+  );
+});
+ArticleCard.displayName = "ArticleCard";
+
+// --- CATEGORY MAP ---
 const CATEGORY_MAP = {
   All: "",
   "Media Review": "Media Review",
@@ -89,183 +127,132 @@ const CATEGORY_MAP = {
   Reflections: "Reflections",
   Technology: "Technology",
   Events: "Events",
-  Digests: "Digests",
-  Innovation: "Innovation",
-  "Expert View": "Expert View",
-  Trends: "Trends",
 };
-
 const getApiCategory = (label) => CATEGORY_MAP[label] ?? label;
 
+// =================================================================
+// MAIN HOME COMPONENT
+// =================================================================
 export default function Home() {
   const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
-  const [category, setCategory] = useState("All"); // UI label
+  const [category, setCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
-  const [limit] = useState(6);
+  const limit = 6;
   const [totalArticles, setTotalArticles] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [isFetching, setIsFetching] = useState(false);
 
-  // UI Category List (display labels)
-  const categories = [
-    "All",
-    "Media Review",
-    "Expert Insights",
-    "Reflections",
-    "Technology",
-    "Events",
-    "Digests",
-    "Innovation",
-    "Expert View",
-    "Trends",
-  ];
+  const categories = useMemo(() => Object.keys(CATEGORY_MAP), []);
 
-  // Fetch articles with filters
   const fetchArticles = useCallback(
-    async (isNewSearch) => {
-      setIsLoading(true);
-      if (isNewSearch) {
+    async (fresh) => {
+      if (isFetching) return;
+      setIsFetching(true);
+      fresh ? setIsInitialLoading(true) : setIsLoadingMore(true);
+      if (fresh) {
         setArticles([]);
         setPage(1);
       }
       setError("");
-
       try {
         const params = new URLSearchParams({
-          page: isNewSearch ? "1" : page.toString(),
+          page: fresh ? "1" : page.toString(),
           limit: limit.toString(),
         });
+        const apiCat = getApiCategory(category);
+        if (category !== "All" && apiCat) params.append("category", apiCat);
+        if (searchTerm.trim()) params.append("search", searchTerm.trim());
 
-        // Apply category filter
-        const apiCategory = getApiCategory(category);
-        if (category !== "All" && apiCategory) {
-          params.append("category", encodeURIComponent(apiCategory));
-        }
-
-        // Apply search term
-        if (searchTerm.trim()) {
-          params.append("search", searchTerm.trim());
-        }
-
-        const response = await API.get(`/api/articles?${params.toString()}`);
-        const { data } = response;
-
-        if (data && Array.isArray(data.articles)) {
-          setArticles((prev) =>
-            isNewSearch ? data.articles : [...prev, ...data.articles]
-          );
-          setTotalArticles(data.total || 0);
-        } else {
-          setArticles([]);
-          setTotalArticles(0);
-        }
+        const { data } = await API.get(`/api/articles?${params.toString()}`);
+        setArticles((prev) => (fresh ? data.articles : [...prev, ...data.articles]));
+        setTotalArticles(data.total ?? 0);
       } catch (err) {
-        console.error("Fetch error:", err);
-        if (err.code === "ERR_NETWORK") {
-          setError(
-            `Network Error: Cannot connect to the API. (Is the server at ${API_BASE_URL} running and CORS configured?)`
-          );
-        } else {
-          setError("Failed to load articles. Please try again later.");
-        }
-        setArticles([]);
-        setTotalArticles(0);
+        setError("Failed to load articles. Please try again later.");
       } finally {
-        setIsLoading(false);
+        setIsInitialLoading(false);
+        setIsLoadingMore(false);
+        setIsFetching(false);
       }
     },
-    [page, limit, category, searchTerm]
+    [category, searchTerm, page, limit, isFetching]
   );
 
-  // Debounced search & category change
   useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      fetchArticles(true);
-    }, 300);
-
-    return () => clearTimeout(debounceTimer);
+    const timer = setTimeout(() => fetchArticles(true), 300);
+    return () => clearTimeout(timer);
   }, [category, searchTerm]);
 
-  // Load more on page change
   useEffect(() => {
-    if (page > 1) {
-      fetchArticles(false);
-    }
+    if (page > 1) fetchArticles(false);
   }, [page]);
 
-  // Handlers
-  const handleCategoryClick = useCallback((label) => {
-    setCategory(label);
-  }, []);
+  const handleReadMore = useCallback((id) => id && navigate(`/article/${id}`), [navigate]);
 
-  const handleSearchChange = useCallback((e) => {
-    setSearchTerm(e.target.value);
-  }, []);
+  const hasMore = articles.length < totalArticles;
 
-  const handleClearFilters = useCallback(() => {
-    setCategory("All");
-    setSearchTerm("");
-  }, []);
-
-  const handleLoadMore = useCallback(() => {
-    setPage((prev) => prev + 1);
-  }, []);
-
-  const handleReadMore = useCallback(
-    (id) => {
-      navigate(`/article/${id}`);
-    },
-    [navigate]
-  );
-
-  const hasMoreArticles = articles.length < totalArticles;
+  // =================================================================
+  // STEP 2: Define the array of images to pass to the Hero component
+  // =================================================================
+  const heroImages = [
+    "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=3200",
+    "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=3200",
+    "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=3200",
+  ];
 
   return (
-    <main className="bg-gradient-to-b from-white via-emerald-50 to-white text-gray-800 pt-20 md:pt-24 min-h-screen">
-      <Hero />
+    <main className="bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] text-gray-100 min-h-screen">
+      {/* 
+        =================================================================
+        STEP 3: Call the Hero component and pass the images as a prop
+        =================================================================
+      */}
+      <Hero backgroundImages={heroImages} />
+
+      {/* --- Main content section for news and insights --- */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
         <motion.h2
           variants={fadeIn}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="text-3xl md:text-4xl font-bold text-center text-taa-dark"
+          className="text-3xl md:text-4xl font-bold text-center text-[#77BFA1]"
         >
           Latest News & Insights
         </motion.h2>
 
-        {/* Filter & Search Controls */}
+        {/* --- Filters and Search --- */}
         <div className="flex flex-col items-center gap-6 mt-8">
           <div className="flex flex-wrap justify-center gap-2">
             {categories.map((label) => (
               <button
                 key={label}
-                onClick={() => handleCategoryClick(label)}
-                className={`px-4 py-2 rounded-full font-medium text-sm transition-colors ${
+                onClick={() => setCategory(label)}
+                className={`px-4 py-2 rounded-full font-medium text-sm transition-all ${
                   category === label
-                    ? "bg-taa-accent text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-taa-primary hover:text-white"
+                    ? "bg-[#77BFA1] text-white shadow-md"
+                    : "bg-white/10 text-gray-200 hover:bg-[#1E6B2B]/50"
                 }`}
               >
                 {label}
               </button>
             ))}
           </div>
-
           <div className="flex w-full max-w-lg items-center gap-2">
             <input
               type="text"
               placeholder="Search by title or keyword..."
               value={searchTerm}
-              onChange={handleSearchChange}
-              className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-taa-accent focus:border-transparent outline-none transition"
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full p-3 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-[#77BFA1] outline-none"
             />
             {(category !== "All" || searchTerm) && (
               <button
-                onClick={handleClearFilters}
-                className="px-4 py-3 bg-gray-200 rounded-lg hover:bg-gray-300 text-sm font-medium transition"
+                onClick={() => { setCategory("All"); setSearchTerm(""); }}
+                className="px-4 py-3 bg-white/10 rounded-lg hover:bg-white/20 text-sm font-medium"
               >
                 Clear
               </button>
@@ -273,21 +260,24 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Articles Grid */}
+        {/* --- Articles Grid --- */}
         <div className="mt-12">
-          {isLoading && articles.length === 0 ? (
-            <p className="text-center text-gray-600">Loading articles...</p>
+          {isInitialLoading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {Array.from({ length: limit }).map((_, i) => <SkeletonCard key={i} />)}
+            </div>
           ) : error ? (
-            <div className="text-center text-red-600 bg-red-50 border border-red-200 p-4 rounded-lg max-w-2xl mx-auto">
-              {error}
+            <div className="text-center text-red-400 p-5 rounded-xl">
+              <p>{error}</p>
+              <button onClick={() => fetchArticles(true)} className="mt-3 underline">Retry</button>
             </div>
           ) : articles.length === 0 ? (
-            <p className="text-center text-gray-600">No articles found matching your criteria.</p>
+            <p className="text-center text-gray-300">No articles found.</p>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {articles.map((article, i) => (
                 <ArticleCard
-                  key={article._id || i}
+                  key={article._id}
                   article={article}
                   index={i}
                   onReadMore={handleReadMore}
@@ -297,15 +287,13 @@ export default function Home() {
           )}
         </div>
 
-        {/* Load More Button */}
+        {/* --- Load More Button --- */}
         <div className="text-center mt-12">
-          {isLoading && articles.length > 0 && (
-            <p className="text-gray-600">Loading more...</p>
-          )}
-          {hasMoreArticles && !isLoading && (
+          {isLoadingMore && <p className="animate-pulse">Loading more...</p>}
+          {hasMore && !isLoadingMore && (
             <button
-              onClick={handleLoadMore}
-              className="px-6 py-3 bg-taa-primary text-white font-semibold rounded-lg hover:bg-taa-accent transition-colors"
+              onClick={() => setPage((p) => p + 1)}
+              className="px-6 py-3 bg-[#1E6B2B] text-white font-semibold rounded-lg hover:bg-[#77BFA1] transition-all"
             >
               Load More
             </button>

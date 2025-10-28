@@ -22,36 +22,35 @@ export default function Nav() {
     { name: "Contact", to: "/contact" },
   ];
 
+  // Effect to handle navbar background change on scroll
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Handler for user logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
-
     showAlert("Logged out successfully!", "logout");
-
-    setTimeout(() => {
-      navigate("/");
-    }, 1200);
+    setTimeout(() => navigate("/"), 1200);
   };
 
   const dashboardPath =
     role === "Admin" || role === "Employee" ? "/admin" : "/client";
 
+  // --- RENDER METHOD ---
   return (
     <header
-      className={`fixed w-full top-0 z-50 transition-all duration-500 ${
+      className={`fixed w-full top-0 z-50 transition-all duration-300 ease-in-out ${
         scrolled
-          ? "bg-white shadow-md border-b border-[var(--taa-accent)]"
-          : "bg-gradient-to-b from-white via-[var(--taa-light)] to-[rgba(119,191,161,0.1)] border-b border-[rgba(30,107,43,0.1)]"
+          ? "bg-[#111827]/80 backdrop-blur-lg border-b border-white/10 shadow-lg"
+          : "bg-transparent border-b border-transparent"
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-        {/* Logo Section */}
+        {/* --- Logo Section --- */}
         <Link to="/" className="flex items-center gap-3 group">
           <motion.div
             whileHover={{ scale: 1.1, rotate: 5 }}
@@ -60,25 +59,31 @@ export default function Nav() {
             <Logo size={44} mode="icon" />
           </motion.div>
           <div>
-            <div className="font-extrabold text-xl text-taa-primary tracking-tight group-hover:text-taa-accent transition">
+            <div
+              className={`font-extrabold text-xl tracking-tight transition-colors ${
+                scrolled ? "text-white" : "text-white"
+              }`}
+            >
               Text Africa Arcade
             </div>
-            <div className="text-xs text-gray-600 italic">
+            <div className="text-xs text-gray-300 italic">
               Digital transformation for text products
             </div>
           </div>
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8 font-medium">
+        {/* --- Desktop Navigation --- */}
+        <nav className="hidden md:flex items-center gap-6 font-medium">
           {navLinks.map((link) => (
             <NavLink
               key={link.name}
               to={link.to}
               className={({ isActive }) =>
-                isActive
-                  ? "text-taa-accent border-b-2 border-taa-accent pb-1"
-                  : "text-[var(--taa-dark)] hover:text-[var(--taa-primary)] transition"
+                `transition-colors hover:text-[#77BFA1] ${
+                  isActive
+                    ? "text-[#77BFA1] border-b-2 border-[#77BFA1] pb-1"
+                    : "text-gray-200"
+                }`
               }
             >
               {link.name}
@@ -86,42 +91,44 @@ export default function Nav() {
           ))}
 
           {/* Auth Buttons */}
-          {token ? (
-            <>
-              <NavLink
-                to={dashboardPath}
-                className="text-[var(--taa-dark)] hover:text-[var(--taa-accent)] transition"
-              >
-                Dashboard
-              </NavLink>
-              <button
-                onClick={handleLogout}
-                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-sm px-5 py-2 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <Link
-                to="/login"
-                className="bg-gradient-to-r from-[var(--taa-primary)] to-[var(--taa-accent)] text-white text-sm px-5 py-2 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
-              >
-                Login
-              </Link>
-              <Link
-                to="/register"
-                className="border border-[var(--taa-primary)] text-[var(--taa-primary)] hover:bg-[var(--taa-primary)] hover:text-white text-sm px-5 py-2 rounded-full shadow-sm transition-all duration-300"
-              >
-                Register
-              </Link>
-            </>
-          )}
+          <div className="flex items-center gap-2 pl-4">
+            {token ? (
+              <>
+                <NavLink
+                  to={dashboardPath}
+                  className="text-gray-200 hover:text-[#77BFA1] transition-colors"
+                >
+                  Dashboard
+                </NavLink>
+                <button
+                  onClick={handleLogout}
+                  className="bg-red-600/80 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-full transition-all duration-300"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="bg-[#1E6B2B] hover:bg-[#77BFA1] hover:text-black text-white text-sm px-4 py-2 rounded-full transition-all duration-300"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="border border-[#77BFA1] text-[#77BFA1] hover:bg-[#77BFA1] hover:text-black text-sm px-4 py-2 rounded-full transition-all duration-300"
+                >
+                  Register
+                </Link>
+              </>
+            )}
+          </div>
         </nav>
 
-        {/* Mobile Menu Icon */}
+        {/* --- Mobile Menu Icon --- */}
         <motion.button
-          className="md:hidden text-[var(--taa-primary)] focus:outline-none bg-white p-2 rounded-full border border-[rgba(30,107,43,0.2)] shadow-sm"
+          className="md:hidden text-white focus:outline-none z-50"
           onClick={() => setMenuOpen(!menuOpen)}
           whileTap={{ scale: 0.9 }}
           aria-label="Toggle menu"
@@ -130,7 +137,7 @@ export default function Nav() {
         </motion.button>
       </div>
 
-      {/* Mobile Menu */}
+      {/* --- Mobile Menu --- */}
       <AnimatePresence>
         {menuOpen && (
           <>
@@ -138,79 +145,53 @@ export default function Nav() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="fixed inset-0 bg-black z-40"
+              className="fixed inset-0 bg-black z-40 md:hidden"
               onClick={() => setMenuOpen(false)}
             />
-
             <motion.nav
-              key="mobileMenu"
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", stiffness: 120, damping: 18 }}
-              className="fixed top-0 right-0 h-full w-3/4 sm:w-1/2 bg-gradient-to-b from-white via-[var(--taa-light)] to-[rgba(119,191,161,0.2)] border-l border-[rgba(30,107,43,0.15)] shadow-2xl z-50 flex flex-col py-8 px-6"
+              transition={{ type: "spring", stiffness: 120, damping: 20 }}
+              className="fixed top-0 right-0 h-full w-4/5 max-w-sm bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] border-l border-white/10 shadow-2xl z-50 flex flex-col p-8"
             >
-              <div className="flex items-center justify-between mb-8">
-                <Logo size={48} mode="icon" />
-                <button
-                  className="text-[var(--taa-primary)] hover:text-[var(--taa-accent)]"
-                  onClick={() => setMenuOpen(false)}
-                  aria-label="Close menu"
-                >
-                  <X size={32} />
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-6 text-lg font-medium">
+              <div className="flex flex-col gap-6 text-xl font-medium text-gray-200">
                 {navLinks.map((link) => (
                   <NavLink
-                    key={link.name}
+                    key={`mobile-${link.name}`}
                     to={link.to}
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
-                      isActive
-                        ? "text-[var(--taa-accent)] font-semibold"
-                        : "text-[var(--taa-dark)] hover:text-[var(--taa-primary)]"
+                      isActive ? "text-[#77BFA1] font-semibold" : "hover:text-white"
                     }
                   >
                     {link.name}
                   </NavLink>
                 ))}
+              </div>
 
-                {/* Auth Buttons */}
+              {/* Auth Buttons in Mobile Menu */}
+              <div className="border-t border-white/10 mt-8 pt-6">
                 {token ? (
-                  <>
-                    <NavLink
-                      to={dashboardPath}
-                      onClick={() => setMenuOpen(false)}
-                      className="text-[var(--taa-accent)]"
-                    >
+                  <div className="flex flex-col gap-4">
+                    <NavLink to={dashboardPath} onClick={() => setMenuOpen(false)} className="text-[#77BFA1] text-xl font-medium">
                       Dashboard
                     </NavLink>
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setMenuOpen(false);
-                      }}
-                      className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-full mt-4 hover:from-red-600 hover:to-red-700 shadow-md hover:shadow-lg transition-all duration-300"
+                    <button onClick={() => { handleLogout(); setMenuOpen(false); }}
+                      className="w-full text-center bg-red-600/80 text-white py-2.5 rounded-full hover:bg-red-600"
                     >
                       Logout
                     </button>
-                  </>
+                  </div>
                 ) : (
-                  <div className="flex flex-col gap-3 mt-6">
-                    <Link
-                      to="/login"
-                      onClick={() => setMenuOpen(false)}
-                      className="w-full text-center bg-gradient-to-r from-[var(--taa-primary)] to-[var(--taa-accent)] text-white py-2 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
+                  <div className="flex flex-col gap-4">
+                    <Link to="/login" onClick={() => setMenuOpen(false)}
+                      className="w-full text-center bg-[#1E6B2B] hover:bg-[#77BFA1] hover:text-black text-white py-2.5 rounded-full"
                     >
                       Login
                     </Link>
-                    <Link
-                      to="/register"
-                      onClick={() => setMenuOpen(false)}
-                      className="w-full text-center border border-[var(--taa-primary)] text-[var(--taa-primary)] py-2 rounded-full hover:bg-[var(--taa-primary)] hover:text-white transition-all duration-300"
+                    <Link to="/register" onClick={() => setMenuOpen(false)}
+                      className="w-full text-center border border-[#77BFA1] text-[#77BFA1] py-2.5 rounded-full hover:bg-[#77BFA1] hover:text-black"
                     >
                       Register
                     </Link>
@@ -218,11 +199,8 @@ export default function Nav() {
                 )}
               </div>
 
-              <div className="mt-auto border-t border-[rgba(30,107,43,0.2)] pt-6 text-sm text-[var(--taa-dark)]">
+              <div className="mt-auto text-sm text-gray-400">
                 <p>© {new Date().getFullYear()} Text Africa Arcade</p>
-                <p className="text-[var(--taa-accent)] mt-1 font-medium">
-                  Digital Innovation Hub
-                </p>
               </div>
             </motion.nav>
           </>

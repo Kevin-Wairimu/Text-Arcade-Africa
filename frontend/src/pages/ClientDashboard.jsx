@@ -43,7 +43,7 @@ export default function ClientDashboard() {
 
       console.log("🌐 Fetching articles from:", API.defaults.baseURL);
 
-      const { data } = await API.get("/api/articles");
+      const { data } = await API.get("/articles");
 
       // Defensive handling: ensure data.articles exists and is an array
       const articlesArray = Array.isArray(data.articles)

@@ -32,30 +32,35 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { data } = await API.post("/api/auth/login", form);
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("userName", data.user.name);
-      localStorage.setItem("role", data.user.role);
+  e.preventDefault();
+  setLoading(true);
+  try {
+    // CALL CORRECT ENDPOINT
+    const { data } = await API.post("/auth/login", form);
 
-      showAlert("Welcome back!", "success");
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("userName", data.user.name);
+    localStorage.setItem("userEmail", data.user.email);
+    localStorage.setItem("role", data.user.role);
 
-      setTimeout(() => {
-        if (data.user.role === "Client") {
-          navigate("/client");
-        } else {
-          navigate("/admin");
-        }
-      }, 400);
-    } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || "Login failed. Please try again.";
-      showAlert(errorMessage, "error");
-      setLoading(false);
-    }
-  };
+    showAlert("Welcome back!", "success");
+
+    setTimeout(() => {
+      if (data.user.role === "Client") {
+        navigate("/client");
+      } else if (data.user.role === "Admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    }, 400);
+  } catch (err) {
+    const msg = err.response?.data?.message || "Login failed";
+    console.error("Login error:", err.response?.data);
+    showAlert(msg, "error");
+    setLoading(false);
+  }
+};
 
   return (
     <main className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-emerald-50 to-white p-4">

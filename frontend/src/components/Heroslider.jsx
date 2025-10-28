@@ -2,13 +2,9 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Logo from "../components/Logo"; // Assuming your Logo component is in this path
 
-/**
- * A hero component with an infinitely scrolling, cross-fading background and cycling slogans.
- *
- * @param {object} props - The component props.
- * @param {string[]} [props.backgroundImages=[]] - An array of image URLs for the background slideshow.
- * @returns {JSX.Element} The rendered Hero component.
- */
+
+// If you don't pass the prop, it will default to the gradient background.
+
 export default function Hero({ backgroundImages = [] }) {
   // --- STATE FOR CYCLING SLOGANS ---
   const slogans = [
@@ -25,7 +21,7 @@ export default function Hero({ backgroundImages = [] }) {
     // Slogan cycling logic
     const sloganTimer = setInterval(() => {
       setSloganIndex((prevIndex) => (prevIndex + 1) % slogans.length);
-    }, 4000); // Change slogan every 4 seconds
+    }, 4000);
 
     // Background image cycling logic
     let imageTimer;
@@ -37,7 +33,7 @@ export default function Hero({ backgroundImages = [] }) {
       }, 5000); // Change image every 5 seconds
     }
 
-    // Clean up timers when the component unmounts to prevent memory leaks
+    // Clean up timers when the component unmounts
     return () => {
       clearInterval(sloganTimer);
       if (imageTimer) {
@@ -50,27 +46,25 @@ export default function Hero({ backgroundImages = [] }) {
   return (
     <section className="relative isolate overflow-hidden bg-[#1E6B2B] text-white">
       {/* --- BACKGROUND IMAGE CONTAINER --- */}
-      {/* This container holds all images and handles the cross-fade animation. */}
-      {/* It only renders if the backgroundImages array is not empty. */}
-      {backgroundImages.length > 0 && (
-        <div className="absolute inset-0 -z-20">
-          {backgroundImages.map((imageUrl, index) => (
-            <img
-              key={index} // Using index is safe here as the array order won't change
-              src={imageUrl}
-              alt={`Hero background ${index + 1}`}
-              className={`
-                absolute inset-0 h-full w-full object-cover
-                transition-opacity duration-1000 ease-in-out
-                ${index === currentImageIndex ? "opacity-100" : "opacity-0"}
-              `}
-            />
-          ))}
-        </div>
-      )}
+      {/* This container holds all images and handles the cross-fade animation */}
+      <div className="absolute inset-0 -z-20">
+        {backgroundImages.map((imageUrl, index) => (
+          <img
+            key={imageUrl}
+            src={imageUrl}
+            alt={`Hero background ${index + 1}`}
+            className={`
+              absolute inset-0 h-full w-full object-cover
+              transition-opacity duration-1000 ease-in-out
+              ${index === currentImageIndex ? "opacity-100" : "opacity-0"}
+            `}
+          />
+        ))}
+      </div>
 
       {/* --- OVERLAY --- */}
       {/* Ensures text is always readable over the background images */}
+      <Hero backgroundImages={heroImages} />
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#1E6B2B]/95 via-[#4ca16c]/85 to-[#77BFA1]/75" />
 
       {/* --- MAIN CONTENT CONTAINER --- */}
