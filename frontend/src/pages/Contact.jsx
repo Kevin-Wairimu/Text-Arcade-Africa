@@ -64,10 +64,8 @@ export default function Contact() {
     [form, showAlert, validateForm]
   );
 
-  const title = "Get in Touch";
-
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#111827] via-[#1E6B2B]/80 to-[#111827] pt-24 md:pt-32 text-gray-100 overflow-hidden">
+    <main className="min-h-screen bg-gradient-to-b from-[#2E7D32] via-[#1B5122]/80 to-[#2E7D32] pt-24 md:pt-32 text-white overflow-hidden">
       <div className="max-w-4xl mx-auto px-6 py-16">
 
         {/* --- Animated Header --- */}
@@ -77,25 +75,15 @@ export default function Contact() {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <h1 className="text-4xl md:text-5xl font-extrabold text-[#77BFA1] drop-shadow-lg mb-6">
-            {title.split("").map((char, i) => (
-              <motion.span
-                key={i}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="inline-block"
-              >
-                {char === " " ? "\u00A0" : char}
-              </motion.span>
-            ))}
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-lg mb-6">
+            Get in Touch
           </h1>
 
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.6 }}
-            className="text-gray-300 max-w-2xl mx-auto text-lg leading-relaxed"
+            transition={{ delay: 0.3, duration: 0.6 }}
+            className="text-gray-200 max-w-2xl mx-auto text-lg leading-relaxed drop-shadow-sm"
           >
             Let’s talk about partnerships, projects, or digital transformation for your newsroom.
           </motion.p>
@@ -108,9 +96,10 @@ export default function Contact() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.2 }}
-          className="bg-[#0b2818]/70 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#77BFA1]/30 max-w-2xl mx-auto"
+          className="bg-[#2E7D32]/20 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-[#2E7D32]/50 max-w-2xl mx-auto"
         >
           <div className="grid gap-5">
+            {/* Name */}
             <div>
               <input
                 type="text"
@@ -118,13 +107,14 @@ export default function Contact() {
                 placeholder="Full Name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className={`w-full p-3 rounded-lg bg-transparent text-gray-100 placeholder-gray-400 border ${
-                  errors.name ? "border-red-500" : "border-[#77BFA1]/30"
+                className={`w-full p-3 rounded-lg bg-[#2E7D32]/10 text-white placeholder-gray-300 border ${
+                  errors.name ? "border-red-500" : "border-[#77BFA1]/40"
                 } focus:outline-none focus:ring-2 focus:ring-[#77BFA1] transition`}
               />
               {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
             </div>
 
+            {/* Email */}
             <div>
               <input
                 type="email"
@@ -132,13 +122,14 @@ export default function Contact() {
                 placeholder="Email Address"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className={`w-full p-3 rounded-lg bg-transparent text-gray-100 placeholder-gray-400 border ${
-                  errors.email ? "border-red-500" : "border-[#77BFA1]/30"
+                className={`w-full p-3 rounded-lg bg-[#2E7D32]/10 text-white placeholder-gray-300 border ${
+                  errors.email ? "border-red-500" : "border-[#77BFA1]/40"
                 } focus:outline-none focus:ring-2 focus:ring-[#77BFA1] transition`}
               />
               {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
             </div>
 
+            {/* Message */}
             <div>
               <textarea
                 name="message"
@@ -146,19 +137,20 @@ export default function Contact() {
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 rows={5}
-                className={`w-full p-3 rounded-lg bg-transparent text-gray-100 placeholder-gray-400 border ${
-                  errors.message ? "border-red-500" : "border-[#77BFA1]/30"
+                className={`w-full p-3 rounded-lg bg-[#2E7D32]/10 text-white placeholder-gray-300 border ${
+                  errors.message ? "border-red-500" : "border-[#77BFA1]/40"
                 } focus:outline-none focus:ring-2 focus:ring-[#77BFA1] transition`}
               />
               {errors.message && <p className="text-red-500 text-sm mt-1">{errors.message}</p>}
             </div>
           </div>
 
+          {/* Submit Button */}
           <motion.button
             whileTap={{ scale: 0.97 }}
             type="submit"
             disabled={loading}
-            className="w-full py-3 mt-8 bg-[#1E6B2B] text-white rounded-lg font-semibold tracking-wide hover:bg-[#77BFA1] hover:text-[#0b2818] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(119,191,161,0.3)]"
+            className="w-full py-3 mt-8 bg-white text-[#2E7D32] rounded-lg font-semibold tracking-wide hover:bg-[#77BFA1] hover:text-white transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(119,191,161,0.3)]"
           >
             {loading ? "Sending..." : "Send Message"}
           </motion.button>

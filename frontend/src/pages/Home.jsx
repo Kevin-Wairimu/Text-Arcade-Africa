@@ -1,11 +1,11 @@
+// src/pages/Home.jsx
 import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Hero from "../components/Hero";
 import axios from "axios";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://your-production-url.com";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://your-production-url.com";
 
 const API = axios.create({
   baseURL: API_BASE_URL,
@@ -43,19 +43,21 @@ function formatRelativeTime(date) {
   });
 }
 
+// --- Skeleton Loader ---
 const SkeletonCard = memo(() => (
-  <div className="bg-[#69f0ae]/20 backdrop-blur-sm border border-[#69f0ae]/40 rounded-2xl shadow-md animate-pulse flex flex-col overflow-hidden">
-    <div className="h-48 bg-[#69f0ae]/30 rounded-t-2xl" />
+  <div className="bg-[#2E7D32]/10 backdrop-blur-md border border-[#2E7D32]/30 rounded-2xl shadow-md animate-pulse flex flex-col overflow-hidden">
+    <div className="h-48 bg-[#2E7D32]/30 rounded-t-2xl" />
     <div className="p-5 flex flex-col flex-grow space-y-3">
-      <div className="h-4 w-32 bg-[#69f0ae]/40 rounded" />
-      <div className="h-6 w-full bg-[#69f0ae]/40 rounded" />
-      <div className="h-4 w-full bg-[#69f0ae]/40 rounded" />
-      <div className="h-4 w-3/4 bg-[#69f0ae]/40 rounded" />
+      <div className="h-4 w-32 bg-[#2E7D32]/50 rounded" />
+      <div className="h-6 w-full bg-[#2E7D32]/50 rounded" />
+      <div className="h-4 w-full bg-[#2E7D32]/50 rounded" />
+      <div className="h-4 w-3/4 bg-[#2E7D32]/50 rounded" />
     </div>
   </div>
 ));
 SkeletonCard.displayName = "SkeletonCard";
 
+// --- Article Card ---
 const ArticleCard = memo(({ article, index, onReadMore }) => {
   const imageUrl = article.image || "https://via.placeholder.com/400x200?text=No+Image";
   return (
@@ -65,7 +67,7 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
       whileInView="visible"
       viewport={{ once: true, amount: 0.3 }}
       variants={fadeIn}
-      className="bg-[#69f0ae]/10 backdrop-blur-sm border border-[#00c853]/50 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
+      className="bg-[#2E7D32]/10 backdrop-blur-md border border-[#2E7D32]/30 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
       onClick={() => onReadMore(article._id)}
       role="article"
       tabIndex={0}
@@ -78,20 +80,21 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
           className="w-full h-48 object-cover transition-transform duration-500 hover:scale-105"
           loading="lazy"
         />
+        <div className="absolute inset-0 bg-black/25" />
       </div>
       <div className="p-5 flex flex-col flex-grow">
-        <div className="text-sm text-[#00c853] font-medium">
+        <div className="text-sm font-medium text-[#2E7D32] z-10 relative">
           {article.category || "General"} • {formatRelativeTime(article.publishedAt)}
         </div>
-        <h3 className="font-semibold text-lg mt-2 text-gray-900 dark:text-white line-clamp-2">
+        <h3 className="font-semibold text-lg mt-2 text-[#2E7D32] line-clamp-2 z-10 relative">
           {article.title || "Untitled Article"}
         </h3>
-        <p className="text-gray-600 dark:text-gray-300 mt-2 text-sm line-clamp-3">
+        <p className="mt-2 text-sm text-gray-700 line-clamp-3 z-10 relative">
           {(article.content || "No content available...").slice(0, 120)}...
         </p>
         <button
           onClick={(e) => { e.stopPropagation(); onReadMore(article._id); }}
-          className="mt-4 text-[#4caf50] hover:text-[#00c853] font-medium text-sm self-start transition-colors"
+          className="mt-4 text-[#2E7D32]/80 hover:text-[#2E7D32] font-medium text-sm self-start transition-colors z-10 relative"
         >
           Read More
         </button>
@@ -101,6 +104,7 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
 });
 ArticleCard.displayName = "ArticleCard";
 
+// --- Categories ---
 const CATEGORY_MAP = {
   All: "",
   "Media Review": "Media Review",
@@ -115,6 +119,7 @@ const CATEGORY_MAP = {
 };
 const getApiCategory = (label) => CATEGORY_MAP[label] ?? label;
 
+// --- Main Component ---
 export default function Home() {
   const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
@@ -134,10 +139,7 @@ export default function Home() {
     if (isFetching) return;
     setIsFetching(true);
     fresh ? setIsInitialLoading(true) : setIsLoadingMore(true);
-    if (fresh) {
-      setArticles([]);
-      setPage(1);
-    }
+    if (fresh) { setArticles([]); setPage(1); }
     setError("");
     try {
       const params = new URLSearchParams({ page: fresh ? "1" : page.toString(), limit: limit.toString() });
@@ -147,11 +149,20 @@ export default function Home() {
       const { data } = await API.get(`/api/articles?${params.toString()}`);
       setArticles((prev) => (fresh ? data.articles : [...prev, ...data.articles]));
       setTotalArticles(data.total ?? 0);
-    } catch { setError("Failed to load articles. Please try again later."); }
-    finally { setIsInitialLoading(false); setIsLoadingMore(false); setIsFetching(false); }
+    } catch {
+      setError("Failed to load articles. Please try again later.");
+    } finally {
+      setIsInitialLoading(false);
+      setIsLoadingMore(false);
+      setIsFetching(false);
+    }
   }, [category, searchTerm, page, limit, isFetching]);
 
-  useEffect(() => { const timer = setTimeout(() => fetchArticles(true), 300); return () => clearTimeout(timer); }, [category, searchTerm]);
+  useEffect(() => {
+    const timer = setTimeout(() => fetchArticles(true), 300);
+    return () => clearTimeout(timer);
+  }, [category, searchTerm]);
+
   useEffect(() => { if (page > 1) fetchArticles(false); }, [page]);
 
   const handleReadMore = useCallback((id) => id && navigate(`/article/${id}`), [navigate]);
@@ -164,7 +175,7 @@ export default function Home() {
   ];
 
   return (
-    <main className="bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] text-gray-100 min-h-screen">
+    <main className="bg-white text-[#2E7D32] min-h-screen">
       <Hero backgroundImages={heroImages} />
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
         <motion.h2
@@ -172,11 +183,12 @@ export default function Home() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="text-3xl md:text-4xl font-bold text-center text-[#00c853]"
+          className="text-3xl md:text-4xl font-bold text-center text-[#2E7D32]"
         >
           Latest News & Insights
         </motion.h2>
 
+        {/* Categories + Search */}
         <div className="flex flex-col items-center gap-6 mt-8">
           <div className="flex flex-wrap justify-center gap-2">
             {categories.map((label) => (
@@ -184,9 +196,7 @@ export default function Home() {
                 key={label}
                 onClick={() => setCategory(label)}
                 className={`px-4 py-2 rounded-full font-medium text-sm transition-all ${
-                  category === label
-                    ? "bg-[#00c853] text-white shadow-md"
-                    : "bg-[#69f0ae]/30 text-white hover:bg-[#4caf50]/50"
+                  category === label ? "bg-[#2E7D32] text-white shadow-md" : "bg-[#81C784]/30 text-[#2E7D32] hover:bg-[#2E7D32]/50"
                 }`}
               >
                 {label}
@@ -199,12 +209,12 @@ export default function Home() {
               placeholder="Search by title or keyword..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-3 rounded-lg border border-[#69f0ae]/40 bg-[#69f0ae]/10 text-white placeholder-[#69f0ae] focus:ring-2 focus:ring-[#00c853] outline-none"
+              className="w-full p-3 rounded-lg border border-[#2E7D32] bg-[#E8F5E9] text-[#2E7D32] placeholder-[#81C784] focus:ring-2 focus:ring-[#2E7D32] outline-none"
             />
             {(category !== "All" || searchTerm) && (
               <button
                 onClick={() => { setCategory("All"); setSearchTerm(""); }}
-                className="px-4 py-3 bg-[#69f0ae]/20 rounded-lg hover:bg-[#4caf50]/50 text-white text-sm font-medium"
+                className="px-4 py-3 bg-[#81C784] rounded-lg hover:bg-[#2E7D32] text-white text-sm font-medium"
               >
                 Clear
               </button>
@@ -212,18 +222,19 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Articles Grid */}
         <div className="mt-12">
           {isInitialLoading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {Array.from({ length: limit }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
           ) : error ? (
-            <div className="text-center text-red-400 p-5 rounded-xl">
+            <div className="text-center text-red-600 p-5 rounded-xl">
               <p>{error}</p>
               <button onClick={() => fetchArticles(true)} className="mt-3 underline">Retry</button>
             </div>
           ) : articles.length === 0 ? (
-            <p className="text-center text-gray-300">No articles found.</p>
+            <p className="text-center text-[#2E7D32]">No articles found.</p>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {articles.map((article, i) => (
@@ -233,12 +244,13 @@ export default function Home() {
           )}
         </div>
 
+        {/* Load More */}
         <div className="text-center mt-12">
-          {isLoadingMore && <p className="animate-pulse">Loading more...</p>}
+          {isLoadingMore && <p className="animate-pulse text-[#2E7D32]">Loading more...</p>}
           {hasMore && !isLoadingMore && (
             <button
               onClick={() => setPage((p) => p + 1)}
-              className="px-6 py-3 bg-[#00c853] text-white font-semibold rounded-lg hover:bg-[#4caf50] transition-all"
+              className="px-6 py-3 bg-[#2E7D32] text-white font-semibold rounded-lg hover:bg-[#81C784] transition-all"
             >
               Load More
             </button>

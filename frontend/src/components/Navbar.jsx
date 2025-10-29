@@ -32,9 +32,9 @@ export default function Nav() {
     role === "Admin" || role === "Employee" ? "/admin" : "/client";
 
   return (
-    <header className="fixed w-full top-0 z-50 bg-[#111827]/70 backdrop-blur-lg border-b border-[#77BFA1]/20 shadow-lg">
+    <header className="fixed w-full top-0 z-50 bg-[#1E6B2B] shadow-md">
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-        {/* --- Logo Section --- */}
+        {/* Logo */}
         <Link to="/" className="flex items-center gap-3 group">
           <motion.div
             whileHover={{ scale: 1.1, rotate: 5 }}
@@ -46,23 +46,23 @@ export default function Nav() {
             <div className="font-extrabold text-xl text-white tracking-tight">
               Text Africa Arcade
             </div>
-            <div className="text-xs text-gray-300 italic">
+            <div className="text-xs text-white/80 italic">
               Digital transformation for text products
             </div>
           </div>
         </Link>
 
-        {/* --- Desktop Navigation --- */}
-        <nav className="hidden md:flex items-center gap-6 font-medium">
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-6 font-medium text-white">
           {navLinks.map((link) => (
             <NavLink
               key={link.name}
               to={link.to}
               className={({ isActive }) =>
-                `transition-colors hover:text-[#77BFA1] ${
+                `transition-colors hover:text-[#81C784] ${
                   isActive
-                    ? "text-[#77BFA1] border-b-2 border-[#77BFA1] pb-1"
-                    : "text-gray-200"
+                    ? "text-[#81C784] border-b-2 border-[#81C784] pb-1"
+                    : ""
                 }`
               }
             >
@@ -76,13 +76,13 @@ export default function Nav() {
               <>
                 <NavLink
                   to={dashboardPath}
-                  className="text-gray-200 hover:text-[#77BFA1] transition-colors"
+                  className="hover:text-[#81C784] transition-colors"
                 >
                   Dashboard
                 </NavLink>
                 <button
                   onClick={handleLogout}
-                  className="bg-red-600/80 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-full transition-all duration-300"
+                  className="bg-white text-[#1E6B2B] text-sm px-4 py-2 rounded-full hover:bg-[#81C784] hover:text-white transition-all duration-300"
                 >
                   Logout
                 </button>
@@ -91,13 +91,13 @@ export default function Nav() {
               <>
                 <Link
                   to="/login"
-                  className="bg-[#1E6B2B] hover:bg-[#77BFA1] hover:text-black text-white text-sm px-4 py-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(119,191,161,0.4)]"
+                  className="bg-white text-[#1E6B2B] hover:bg-[#81C784] hover:text-white text-sm px-4 py-2 rounded-full transition-all duration-300"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="border border-[#77BFA1] text-[#77BFA1] hover:bg-[#77BFA1] hover:text-black text-sm px-4 py-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(119,191,161,0.4)]"
+                  className="border border-white text-white hover:bg-white hover:text-[#1E6B2B] text-sm px-4 py-2 rounded-full transition-all duration-300"
                 >
                   Register
                 </Link>
@@ -106,7 +106,7 @@ export default function Nav() {
           </div>
         </nav>
 
-        {/* --- Mobile Menu Icon --- */}
+        {/* Mobile Menu Icon */}
         <motion.button
           className="md:hidden text-white focus:outline-none z-50"
           onClick={() => setMenuOpen(!menuOpen)}
@@ -117,32 +117,48 @@ export default function Nav() {
         </motion.button>
       </div>
 
-      {/* --- Mobile Menu --- */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {menuOpen && (
           <>
+            {/* Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black z-40 md:hidden"
+              className="fixed inset-0 bg-black/40 z-40 md:hidden"
               onClick={() => setMenuOpen(false)}
             />
+
+            {/* Sidebar */}
             <motion.nav
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
-              className="fixed top-0 right-0 h-full w-4/5 max-w-sm bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] border-l border-[#77BFA1]/20 shadow-2xl z-50 flex flex-col p-8"
+              className="fixed top-0 right-0 h-full w-4/5 max-w-sm bg-[#1E6B2B] z-50 flex flex-col p-8 shadow-2xl text-white"
             >
-              <div className="flex flex-col gap-6 text-xl font-medium text-gray-200">
+              {/* Close Button */}
+              <div className="flex justify-end mb-6">
+                <button
+                  onClick={() => setMenuOpen(false)}
+                  className="text-white focus:outline-none hover:text-[#81C784]"
+                >
+                  <X size={28} />
+                </button>
+              </div>
+
+              {/* Nav Links */}
+              <div className="flex flex-col gap-6 text-xl font-medium">
                 {navLinks.map((link) => (
                   <NavLink
                     key={`mobile-${link.name}`}
                     to={link.to}
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
-                      isActive ? "text-[#77BFA1] font-semibold" : "hover:text-white"
+                      isActive
+                        ? "font-semibold text-[#81C784]"
+                        : "hover:text-[#77BFA1] transition-colors"
                     }
                   >
                     {link.name}
@@ -150,14 +166,14 @@ export default function Nav() {
                 ))}
               </div>
 
-              {/* Auth Buttons in Mobile Menu */}
-              <div className="border-t border-[#77BFA1]/20 mt-8 pt-6 flex flex-col gap-4">
+              {/* Mobile Auth */}
+              <div className="border-t border-white/30 mt-8 pt-6 flex flex-col gap-4">
                 {token ? (
                   <>
                     <NavLink
                       to={dashboardPath}
                       onClick={() => setMenuOpen(false)}
-                      className="text-[#77BFA1] text-xl font-medium"
+                      className="text-white text-xl font-medium hover:text-[#81C784] transition-colors"
                     >
                       Dashboard
                     </NavLink>
@@ -166,7 +182,7 @@ export default function Nav() {
                         handleLogout();
                         setMenuOpen(false);
                       }}
-                      className="w-full text-center bg-red-600/80 text-white py-2.5 rounded-full hover:bg-red-600"
+                      className="w-full text-center bg-white text-[#1E6B2B] py-2.5 rounded-full hover:bg-[#81C784] hover:text-white transition-colors"
                     >
                       Logout
                     </button>
@@ -176,14 +192,14 @@ export default function Nav() {
                     <Link
                       to="/login"
                       onClick={() => setMenuOpen(false)}
-                      className="w-full text-center bg-[#1E6B2B] hover:bg-[#77BFA1] hover:text-black text-white py-2.5 rounded-full shadow-[0_0_10px_rgba(119,191,161,0.4)]"
+                      className="w-full text-center bg-white text-[#1E6B2B] py-2.5 rounded-full hover:bg-[#81C784] hover:text-white transition-colors"
                     >
                       Login
                     </Link>
                     <Link
                       to="/register"
                       onClick={() => setMenuOpen(false)}
-                      className="w-full text-center border border-[#77BFA1] text-[#77BFA1] py-2.5 rounded-full hover:bg-[#77BFA1] hover:text-black shadow-[0_0_10px_rgba(119,191,161,0.4)]"
+                      className="w-full text-center border border-white text-white hover:bg-white hover:text-[#1E6B2B] py-2.5 rounded-full transition-colors"
                     >
                       Register
                     </Link>
@@ -191,7 +207,7 @@ export default function Nav() {
                 )}
               </div>
 
-              <div className="mt-auto text-sm text-gray-400">
+              <div className="mt-auto text-sm text-white/70">
                 <p>© {new Date().getFullYear()} Text Africa Arcade</p>
               </div>
             </motion.nav>
