@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,9 +6,6 @@ import { useAlert } from "../context/AlertContext";
 import Logo from "./Logo";
 
 export default function Nav() {
-  // --- REMOVED: The 'scrolled' state is no longer needed ---
-  // const [scrolled, setScrolled] = useState(false);
-  
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { showAlert } = useAlert();
@@ -24,15 +21,6 @@ export default function Nav() {
     { name: "Contact", to: "/contact" },
   ];
 
-  // --- REMOVED: The scroll event listener is no longer needed ---
-  /*
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-  */
-
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
@@ -43,12 +31,8 @@ export default function Nav() {
   const dashboardPath =
     role === "Admin" || role === "Employee" ? "/admin" : "/client";
 
-  // --- RENDER METHOD ---
   return (
-    // --- UPDATED: Removed conditional logic to make the background always solid ---
-    <header
-      className="fixed w-full top-0 z-50 bg-[#111827]/80 backdrop-blur-lg border-b border-white/10 shadow-lg"
-    >
+    <header className="fixed w-full top-0 z-50 bg-[#111827]/70 backdrop-blur-lg border-b border-[#77BFA1]/20 shadow-lg">
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
         {/* --- Logo Section --- */}
         <Link to="/" className="flex items-center gap-3 group">
@@ -59,7 +43,6 @@ export default function Nav() {
             <Logo size={44} mode="icon" />
           </motion.div>
           <div>
-            {/* --- SIMPLIFIED: Redundant class logic removed --- */}
             <div className="font-extrabold text-xl text-white tracking-tight">
               Text Africa Arcade
             </div>
@@ -108,13 +91,13 @@ export default function Nav() {
               <>
                 <Link
                   to="/login"
-                  className="bg-[#1E6B2B] hover:bg-[#77BFA1] hover:text-black text-white text-sm px-4 py-2 rounded-full transition-all duration-300"
+                  className="bg-[#1E6B2B] hover:bg-[#77BFA1] hover:text-black text-white text-sm px-4 py-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(119,191,161,0.4)]"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="border border-[#77BFA1] text-[#77BFA1] hover:bg-[#77BFA1] hover:text-black text-sm px-4 py-2 rounded-full transition-all duration-300"
+                  className="border border-[#77BFA1] text-[#77BFA1] hover:bg-[#77BFA1] hover:text-black text-sm px-4 py-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(119,191,161,0.4)]"
                 >
                   Register
                 </Link>
@@ -150,7 +133,7 @@ export default function Nav() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
-              className="fixed top-0 right-0 h-full w-4/5 max-w-sm bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] border-l border-white/10 shadow-2xl z-50 flex flex-col p-8"
+              className="fixed top-0 right-0 h-full w-4/5 max-w-sm bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] border-l border-[#77BFA1]/20 shadow-2xl z-50 flex flex-col p-8"
             >
               <div className="flex flex-col gap-6 text-xl font-medium text-gray-200">
                 {navLinks.map((link) => (
@@ -168,31 +151,43 @@ export default function Nav() {
               </div>
 
               {/* Auth Buttons in Mobile Menu */}
-              <div className="border-t border-white/10 mt-8 pt-6">
+              <div className="border-t border-[#77BFA1]/20 mt-8 pt-6 flex flex-col gap-4">
                 {token ? (
-                  <div className="flex flex-col gap-4">
-                    <NavLink to={dashboardPath} onClick={() => setMenuOpen(false)} className="text-[#77BFA1] text-xl font-medium">
+                  <>
+                    <NavLink
+                      to={dashboardPath}
+                      onClick={() => setMenuOpen(false)}
+                      className="text-[#77BFA1] text-xl font-medium"
+                    >
                       Dashboard
                     </NavLink>
-                    <button onClick={() => { handleLogout(); setMenuOpen(false); }}
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setMenuOpen(false);
+                      }}
                       className="w-full text-center bg-red-600/80 text-white py-2.5 rounded-full hover:bg-red-600"
                     >
                       Logout
                     </button>
-                  </div>
+                  </>
                 ) : (
-                  <div className="flex flex-col gap-4">
-                    <Link to="/login" onClick={() => setMenuOpen(false)}
-                      className="w-full text-center bg-[#1E6B2B] hover:bg-[#77BFA1] hover:text-black text-white py-2.5 rounded-full"
+                  <>
+                    <Link
+                      to="/login"
+                      onClick={() => setMenuOpen(false)}
+                      className="w-full text-center bg-[#1E6B2B] hover:bg-[#77BFA1] hover:text-black text-white py-2.5 rounded-full shadow-[0_0_10px_rgba(119,191,161,0.4)]"
                     >
                       Login
                     </Link>
-                    <Link to="/register" onClick={() => setMenuOpen(false)}
-                      className="w-full text-center border border-[#77BFA1] text-[#77BFA1] py-2.5 rounded-full hover:bg-[#77BFA1] hover:text-black"
+                    <Link
+                      to="/register"
+                      onClick={() => setMenuOpen(false)}
+                      className="w-full text-center border border-[#77BFA1] text-[#77BFA1] py-2.5 rounded-full hover:bg-[#77BFA1] hover:text-black shadow-[0_0_10px_rgba(119,191,161,0.4)]"
                     >
                       Register
                     </Link>
-                  </div>
+                  </>
                 )}
               </div>
 

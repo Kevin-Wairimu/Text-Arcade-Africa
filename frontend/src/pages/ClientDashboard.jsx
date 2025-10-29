@@ -5,7 +5,6 @@ import API from "../utils/api";
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
-
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,7 +13,7 @@ export default function ClientDashboard() {
   const name = localStorage.getItem("userName") || "Valued Client";
 
   const categories = [
-    "All", "Media Review", "Expert Insights", "Reflections", "Technology", 
+    "All", "Media Review", "Expert Insights", "Reflections", "Technology",
     "Events", "Digest", "Innovation", "Expert View", "Trends", "General",
   ];
 
@@ -51,7 +50,6 @@ export default function ClientDashboard() {
   const featuredArticles = filteredArticles.slice(0, 3);
   const recentArticles = filteredArticles.slice(3, 9);
 
-  // --- LOADING & ERROR STATES (Styled for Dark Theme) ---
   if (loading || error) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] flex items-center justify-center px-4">
@@ -66,7 +64,7 @@ export default function ClientDashboard() {
               <p className="text-white text-xl font-medium">Loading dashboard...</p>
             </>
           ) : (
-            <div className="max-w-md bg-[#111827]/60 backdrop-blur-md rounded-2xl p-8 border border-[#77BFA1]/20">
+            <div className="max-w-md bg-[#111827]/60 backdrop-blur-lg rounded-2xl p-8 border border-[#77BFA1]/20">
               <h2 className="text-2xl font-bold text-white mb-4">Oops! Something went wrong</h2>
               <p className="text-gray-300 mb-6">{error}</p>
               <div className="flex gap-4 justify-center">
@@ -90,15 +88,10 @@ export default function ClientDashboard() {
     );
   }
 
-  // --- MAIN DASHBOARD ---
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] pt-24 md:pt-32 text-gray-200">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-extrabold text-[#77BFA1] mb-4">
             Welcome back, {name}! 👋
           </h1>
@@ -130,12 +123,7 @@ export default function ClientDashboard() {
 
         {/* FEATURED ARTICLES */}
         {featuredArticles.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-12"
-          >
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-12">
             <h2 className="text-3xl font-bold text-white mb-6">Featured Stories</h2>
             <div className="grid md:grid-cols-3 gap-6">
               {featuredArticles.map((article) => (
@@ -161,11 +149,7 @@ export default function ClientDashboard() {
 
         {/* RECENT ARTICLES */}
         {recentArticles.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <h2 className="text-3xl font-bold text-white mb-6">Recent Updates</h2>
             <div className="space-y-4">
               {recentArticles.map((article) => (
@@ -191,11 +175,7 @@ export default function ClientDashboard() {
 
         {/* EMPTY STATE */}
         {filteredArticles.length === 0 && (
-          <motion.section
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-20"
-          >
+          <motion.section initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-20">
             <h2 className="text-2xl font-bold text-white mb-4">No articles found in this category</h2>
             <p className="text-gray-400 mb-6">Try selecting a different one or check back later for new content.</p>
             <Link

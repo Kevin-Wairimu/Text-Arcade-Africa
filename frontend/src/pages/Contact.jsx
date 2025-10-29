@@ -9,7 +9,6 @@ export default function Contact() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({ name: "", email: "", message: "" });
 
-  // ✅ Validation
   const validateForm = useCallback(() => {
     const newErrors = { name: "", email: "", message: "" };
     let valid = true;
@@ -37,7 +36,6 @@ export default function Contact() {
     return valid;
   }, [form]);
 
-  // ✅ Submit handler
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
@@ -48,15 +46,12 @@ export default function Contact() {
 
       setLoading(true);
       try {
-        console.log("📤 Sending contact form...");
         const { data } = await API.post("/contact", form);
-        console.log("✅ Response:", data);
         showAlert(data.message || "Message sent successfully!", "success");
 
         setForm({ name: "", email: "", message: "" });
         setErrors({ name: "", email: "", message: "" });
       } catch (err) {
-        console.error("❌ Contact form error:", err);
         showAlert(
           err.response?.data?.message ||
             "Failed to send message. Please try again later.",
@@ -72,7 +67,7 @@ export default function Contact() {
   const title = "Get in Touch";
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#0d1b12] via-[#102918] to-[#0d1b12] pt-24 md:pt-32 text-gray-100 overflow-hidden">
+    <main className="min-h-screen bg-gradient-to-b from-[#111827] via-[#1E6B2B]/80 to-[#111827] pt-24 md:pt-32 text-gray-100 overflow-hidden">
       <div className="max-w-4xl mx-auto px-6 py-16">
 
         {/* --- Animated Header --- */}
@@ -113,7 +108,7 @@ export default function Contact() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.2 }}
-          className="bg-[#111827]/60 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#1E6B2B]/50 max-w-2xl mx-auto"
+          className="bg-[#0b2818]/70 backdrop-blur-lg p-8 rounded-2xl shadow-2xl border border-[#77BFA1]/30 max-w-2xl mx-auto"
         >
           <div className="grid gap-5">
             <div>
@@ -124,7 +119,7 @@ export default function Contact() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className={`w-full p-3 rounded-lg bg-transparent text-gray-100 placeholder-gray-400 border ${
-                  errors.name ? "border-red-500" : "border-[#1E6B2B]/40"
+                  errors.name ? "border-red-500" : "border-[#77BFA1]/30"
                 } focus:outline-none focus:ring-2 focus:ring-[#77BFA1] transition`}
               />
               {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
@@ -138,7 +133,7 @@ export default function Contact() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className={`w-full p-3 rounded-lg bg-transparent text-gray-100 placeholder-gray-400 border ${
-                  errors.email ? "border-red-500" : "border-[#1E6B2B]/40"
+                  errors.email ? "border-red-500" : "border-[#77BFA1]/30"
                 } focus:outline-none focus:ring-2 focus:ring-[#77BFA1] transition`}
               />
               {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
@@ -152,7 +147,7 @@ export default function Contact() {
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 rows={5}
                 className={`w-full p-3 rounded-lg bg-transparent text-gray-100 placeholder-gray-400 border ${
-                  errors.message ? "border-red-500" : "border-[#1E6B2B]/40"
+                  errors.message ? "border-red-500" : "border-[#77BFA1]/30"
                 } focus:outline-none focus:ring-2 focus:ring-[#77BFA1] transition`}
               />
               {errors.message && <p className="text-red-500 text-sm mt-1">{errors.message}</p>}
@@ -163,7 +158,7 @@ export default function Contact() {
             whileTap={{ scale: 0.97 }}
             type="submit"
             disabled={loading}
-            className="w-full py-3 mt-8 bg-[#1E6B2B] text-white rounded-lg font-semibold tracking-wide hover:bg-[#77BFA1] hover:text-[#0d1b12] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-3 mt-8 bg-[#1E6B2B] text-white rounded-lg font-semibold tracking-wide hover:bg-[#77BFA1] hover:text-[#0b2818] transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(119,191,161,0.3)]"
           >
             {loading ? "Sending..." : "Send Message"}
           </motion.button>
