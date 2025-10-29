@@ -5,7 +5,9 @@ const Article = require("../models/Article");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 
-// EXPORTS THE 'register' FUNCTION
+// ───────────────────────────────────────────────────────────────
+// 1. REGISTER
+// ───────────────────────────────────────────────────────────────
 exports.register = async (req, res) => {
   console.log("SERVER: Register controller hit with body:", req.body);
   const { name, email, password, role } = req.body;
@@ -28,7 +30,8 @@ exports.register = async (req, res) => {
     await user.save();
     console.log("SERVER: New user saved to database:", user);
 
-    const payload = { user: { id: user.id, role: user.role } };
+    // FIXED: Use `id` and `role` directly in payload
+    const payload = { id: user._id, role: user.role };
     const secret = process.env.JWT_SECRET || "your_default_secret_key";
 
     jwt.sign(payload, secret, { expiresIn: "5h" }, (err, token) => {
@@ -37,7 +40,7 @@ exports.register = async (req, res) => {
       res.status(201).json({
         token,
         user: {
-          id: user.id,
+          id: user._id,
           name: user.name,
           email: user.email,
           role: user.role,
@@ -50,7 +53,9 @@ exports.register = async (req, res) => {
   }
 };
 
-// EXPORTS THE 'login' FUNCTION
+// ───────────────────────────────────────────────────────────────
+// 2. LOGIN
+// ───────────────────────────────────────────────────────────────
 exports.login = async (req, res) => {
   console.log("SERVER: Login controller has been hit.");
   console.log("SERVER: Received request body:", req.body);
@@ -68,12 +73,18 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    // BLOCK SUSPENDED USERS
+    if (user.suspended) {
+      return res.status(403).json({ message: "Account suspended. Contact admin." });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const payload = { user: { id: user.id, role: user.role } };
+    // FIXED: Use `id` and `role` directly
+    const payload = { id: user._id, role: user.role };
     const secret = process.env.JWT_SECRET || "your_default_secret_key";
 
     jwt.sign(payload, secret, { expiresIn: "5h" }, (err, token) => {
@@ -82,7 +93,7 @@ exports.login = async (req, res) => {
       res.json({
         token,
         user: {
-          id: user.id,
+          id: user._id,
           name: user.name,
           email: user.email,
           role: user.role,
@@ -95,13 +106,14 @@ exports.login = async (req, res) => {
   }
 };
 
-// UPDATE AN ARTICLE
+// ───────────────────────────────────────────────────────────────
+// 3. UPDATE ARTICLE
+// ───────────────────────────────────────────────────────────────
 exports.updateArticle = async (req, res) => {
   console.log(`SERVER: updateArticle controller hit for ID: ${req.params.id}`);
 
   const { title, content, author, category, featured, image } = req.body;
 
-  // Basic validation
   if (!title || !content || !category) {
     return res
       .status(400)
@@ -115,7 +127,6 @@ exports.updateArticle = async (req, res) => {
       return res.status(404).json({ message: "Article not found" });
     }
 
-    // Update fields
     article.title = title;
     article.content = content;
     article.author = author;
@@ -133,6 +144,9 @@ exports.updateArticle = async (req, res) => {
   }
 };
 
+// ───────────────────────────────────────────────────────────────
+// 4. FORGOT PASSWORD
+// ───────────────────────────────────────────────────────────────
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
@@ -146,7 +160,6 @@ exports.forgotPassword = async (req, res) => {
         });
     }
 
-    // --- PART 1: THE DATABASE FIX ---
     const resetToken = crypto.randomBytes(20).toString("hex");
     const hashedToken = crypto
       .createHash("sha256")
@@ -154,33 +167,28 @@ exports.forgotPassword = async (req, res) => {
       .digest("hex");
     const expiryDate = Date.now() + 3600000; // 1 hour
 
-    // Use findOneAndUpdate for a single, atomic, and more reliable database operation.
-    // This is more robust than find() followed by save().
     const updatedUser = await User.findOneAndUpdate(
-      { _id: user._id }, // Find the user by their unique ID
+      { _id: user._id },
       {
         $set: {
-          // Explicitly set the fields to be updated
           resetPasswordToken: hashedToken,
           resetPasswordExpires: expiryDate,
         },
       },
-      { new: true } // Ensure the updated document is returned
+      { new: true }
     );
 
-    // Verify that the update operation was successful
     if (!updatedUser || updatedUser.resetPasswordToken !== hashedToken) {
       console.log("SERVER CRITICAL ERROR: Database update failed silently.");
       throw new Error("Failed to save reset token to the database.");
     }
     console.log("SERVER: HASHED token has been successfully saved to DB.");
 
-    // --- PART 2: THE NODEMAILER FIX ---
     const resetURL = `http://localhost:5173/reset-password/${resetToken}`;
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
-      secure: true, // Use SSL
+      secure: true,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -191,7 +199,7 @@ exports.forgotPassword = async (req, res) => {
       from: `"Text Africa Arcade" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: "Your Password Reset Link",
-      html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.6; border: 1px solid #ddd; border-radius: 8px; max-w: 600px; margin: auto;">
+      html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.6; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
           <h2 style="color: #1E6B2B; border-bottom: 2px solid #77BFA1; padding-bottom: 10px;">Password Reset Request</h2>
           <p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>
           <p>Please click on the button below to be redirected to the password reset page. This link is only valid for one hour.</p>
@@ -204,7 +212,7 @@ exports.forgotPassword = async (req, res) => {
             If you're having trouble clicking the button, copy and paste the URL below into your web browser:<br>
             <a href="${resetURL}" style="color: #1E6B2B;">${resetURL}</a>
           </p>
-        </div>`, // Your full email HTML
+        </div>`,
     };
 
     console.log("SERVER: Attempting to send email...");
@@ -220,6 +228,9 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+// ───────────────────────────────────────────────────────────────
+// 5. RESET PASSWORD
+// ───────────────────────────────────────────────────────────────
 exports.resetPassword = async (req, res) => {
   try {
     const plainTokenFromURL = req.params.token;

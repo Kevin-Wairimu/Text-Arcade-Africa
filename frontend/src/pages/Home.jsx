@@ -1,15 +1,6 @@
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-  memo,
-} from "react";
+import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-// =================================================================
-// STEP 1: Import the Hero component
-// =================================================================
 import Hero from "../components/Hero";
 import axios from "axios";
 
@@ -21,7 +12,6 @@ const API = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// --- ANIMATION VARIANTS ---
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
   visible: (i = 1) => ({
@@ -31,7 +21,6 @@ const fadeIn = {
   }),
 };
 
-// --- DATE FORMATTER ---
 function formatRelativeTime(date) {
   if (!date) return "Date unavailable";
   const published = new Date(date);
@@ -54,24 +43,21 @@ function formatRelativeTime(date) {
   });
 }
 
-// --- SKELETON CARD ---
 const SkeletonCard = memo(() => (
-  <div className="bg-white/90 dark:bg-[#111827]/80 backdrop-blur-sm border border-white/20 dark:border-[#1E6B2B]/20 rounded-2xl shadow-md animate-pulse flex flex-col overflow-hidden">
-    <div className="h-48 bg-gray-300 dark:bg-gray-700 rounded-t-2xl" />
+  <div className="bg-[#69f0ae]/20 backdrop-blur-sm border border-[#69f0ae]/40 rounded-2xl shadow-md animate-pulse flex flex-col overflow-hidden">
+    <div className="h-48 bg-[#69f0ae]/30 rounded-t-2xl" />
     <div className="p-5 flex flex-col flex-grow space-y-3">
-      <div className="h-4 w-32 bg-gray-300 dark:bg-gray-600 rounded" />
-      <div className="h-6 w-full bg-gray-300 dark:bg-gray-600 rounded" />
-      <div className="h-4 w-full bg-gray-300 dark:bg-gray-600 rounded" />
-      <div className="h-4 w-3/4 bg-gray-300 dark:bg-gray-600 rounded" />
+      <div className="h-4 w-32 bg-[#69f0ae]/40 rounded" />
+      <div className="h-6 w-full bg-[#69f0ae]/40 rounded" />
+      <div className="h-4 w-full bg-[#69f0ae]/40 rounded" />
+      <div className="h-4 w-3/4 bg-[#69f0ae]/40 rounded" />
     </div>
   </div>
 ));
 SkeletonCard.displayName = "SkeletonCard";
 
-// --- ARTICLE CARD ---
 const ArticleCard = memo(({ article, index, onReadMore }) => {
-  const imageUrl =
-    article.image || "https://via.placeholder.com/400x200?text=No+Image";
+  const imageUrl = article.image || "https://via.placeholder.com/400x200?text=No+Image";
   return (
     <motion.div
       custom={index}
@@ -79,7 +65,7 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
       whileInView="visible"
       viewport={{ once: true, amount: 0.3 }}
       variants={fadeIn}
-      className="bg-white/90 dark:bg-[#111827]/80 backdrop-blur-sm border border-white/20 dark:border-[#1E6B2B]/20 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
+      className="bg-[#69f0ae]/10 backdrop-blur-sm border border-[#00c853]/50 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
       onClick={() => onReadMore(article._id)}
       role="article"
       tabIndex={0}
@@ -94,9 +80,8 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
         />
       </div>
       <div className="p-5 flex flex-col flex-grow">
-        <div className="text-sm text-[#77BFA1] font-medium">
-          {article.category || "General"} •{" "}
-          {formatRelativeTime(article.publishedAt)}
+        <div className="text-sm text-[#00c853] font-medium">
+          {article.category || "General"} • {formatRelativeTime(article.publishedAt)}
         </div>
         <h3 className="font-semibold text-lg mt-2 text-gray-900 dark:text-white line-clamp-2">
           {article.title || "Untitled Article"}
@@ -105,11 +90,8 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
           {(article.content || "No content available...").slice(0, 120)}...
         </p>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onReadMore(article._id);
-          }}
-          className="mt-4 text-[#1E6B2B] hover:text-[#77BFA1] font-medium text-sm self-start transition-colors"
+          onClick={(e) => { e.stopPropagation(); onReadMore(article._id); }}
+          className="mt-4 text-[#4caf50] hover:text-[#00c853] font-medium text-sm self-start transition-colors"
         >
           Read More
         </button>
@@ -119,7 +101,6 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
 });
 ArticleCard.displayName = "ArticleCard";
 
-// --- CATEGORY MAP ---
 const CATEGORY_MAP = {
   All: "",
   "Media Review": "Media Review",
@@ -134,9 +115,6 @@ const CATEGORY_MAP = {
 };
 const getApiCategory = (label) => CATEGORY_MAP[label] ?? label;
 
-// =================================================================
-// MAIN HOME COMPONENT
-// =================================================================
 export default function Home() {
   const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
@@ -152,83 +130,53 @@ export default function Home() {
 
   const categories = useMemo(() => Object.keys(CATEGORY_MAP), []);
 
-  const fetchArticles = useCallback(
-    async (fresh) => {
-      if (isFetching) return;
-      setIsFetching(true);
-      fresh ? setIsInitialLoading(true) : setIsLoadingMore(true);
-      if (fresh) {
-        setArticles([]);
-        setPage(1);
-      }
-      setError("");
-      try {
-        const params = new URLSearchParams({
-          page: fresh ? "1" : page.toString(),
-          limit: limit.toString(),
-        });
-        const apiCat = getApiCategory(category);
-        if (category !== "All" && apiCat) params.append("category", apiCat);
-        if (searchTerm.trim()) params.append("search", searchTerm.trim());
+  const fetchArticles = useCallback(async (fresh) => {
+    if (isFetching) return;
+    setIsFetching(true);
+    fresh ? setIsInitialLoading(true) : setIsLoadingMore(true);
+    if (fresh) {
+      setArticles([]);
+      setPage(1);
+    }
+    setError("");
+    try {
+      const params = new URLSearchParams({ page: fresh ? "1" : page.toString(), limit: limit.toString() });
+      const apiCat = getApiCategory(category);
+      if (category !== "All" && apiCat) params.append("category", apiCat);
+      if (searchTerm.trim()) params.append("search", searchTerm.trim());
+      const { data } = await API.get(`/api/articles?${params.toString()}`);
+      setArticles((prev) => (fresh ? data.articles : [...prev, ...data.articles]));
+      setTotalArticles(data.total ?? 0);
+    } catch { setError("Failed to load articles. Please try again later."); }
+    finally { setIsInitialLoading(false); setIsLoadingMore(false); setIsFetching(false); }
+  }, [category, searchTerm, page, limit, isFetching]);
 
-        const { data } = await API.get(`/api/articles?${params.toString()}`);
-        setArticles((prev) => (fresh ? data.articles : [...prev, ...data.articles]));
-        setTotalArticles(data.total ?? 0);
-      } catch (err) {
-        setError("Failed to load articles. Please try again later.");
-      } finally {
-        setIsInitialLoading(false);
-        setIsLoadingMore(false);
-        setIsFetching(false);
-      }
-    },
-    [category, searchTerm, page, limit, isFetching]
-  );
-
-  useEffect(() => {
-    const timer = setTimeout(() => fetchArticles(true), 300);
-    return () => clearTimeout(timer);
-  }, [category, searchTerm]);
-
-  useEffect(() => {
-    if (page > 1) fetchArticles(false);
-  }, [page]);
+  useEffect(() => { const timer = setTimeout(() => fetchArticles(true), 300); return () => clearTimeout(timer); }, [category, searchTerm]);
+  useEffect(() => { if (page > 1) fetchArticles(false); }, [page]);
 
   const handleReadMore = useCallback((id) => id && navigate(`/article/${id}`), [navigate]);
-
   const hasMore = articles.length < totalArticles;
 
-  // =================================================================
-  // STEP 2: Define the array of images to pass to the Hero component
-  // =================================================================
   const heroImages = [
-    "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=3200",
-    "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=3200",
-    "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=3200",
+    "https://images.unsplash.com/photo-1556761175-5973dc0f32e7",
+    "https://images.unsplash.com/photo-1522202176988-66273c2fd55f",
+    "https://images.unsplash.com/photo-1600880292203-757bb62b4baf",
   ];
 
   return (
     <main className="bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] text-gray-100 min-h-screen">
-      {/* 
-        =================================================================
-        STEP 3: Call the Hero component and pass the images as a prop
-        =================================================================
-      */}
       <Hero backgroundImages={heroImages} />
-
-      {/* --- Main content section for news and insights --- */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
         <motion.h2
           variants={fadeIn}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="text-3xl md:text-4xl font-bold text-center text-[#77BFA1]"
+          className="text-3xl md:text-4xl font-bold text-center text-[#00c853]"
         >
           Latest News & Insights
         </motion.h2>
 
-        {/* --- Filters and Search --- */}
         <div className="flex flex-col items-center gap-6 mt-8">
           <div className="flex flex-wrap justify-center gap-2">
             {categories.map((label) => (
@@ -237,8 +185,8 @@ export default function Home() {
                 onClick={() => setCategory(label)}
                 className={`px-4 py-2 rounded-full font-medium text-sm transition-all ${
                   category === label
-                    ? "bg-[#77BFA1] text-white shadow-md"
-                    : "bg-white/10 text-gray-200 hover:bg-[#1E6B2B]/50"
+                    ? "bg-[#00c853] text-white shadow-md"
+                    : "bg-[#69f0ae]/30 text-white hover:bg-[#4caf50]/50"
                 }`}
               >
                 {label}
@@ -251,12 +199,12 @@ export default function Home() {
               placeholder="Search by title or keyword..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-3 rounded-lg border border-white/20 bg-white/10 text-white placeholder-gray-400 focus:ring-2 focus:ring-[#77BFA1] outline-none"
+              className="w-full p-3 rounded-lg border border-[#69f0ae]/40 bg-[#69f0ae]/10 text-white placeholder-[#69f0ae] focus:ring-2 focus:ring-[#00c853] outline-none"
             />
             {(category !== "All" || searchTerm) && (
               <button
                 onClick={() => { setCategory("All"); setSearchTerm(""); }}
-                className="px-4 py-3 bg-white/10 rounded-lg hover:bg-white/20 text-sm font-medium"
+                className="px-4 py-3 bg-[#69f0ae]/20 rounded-lg hover:bg-[#4caf50]/50 text-white text-sm font-medium"
               >
                 Clear
               </button>
@@ -264,7 +212,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* --- Articles Grid --- */}
         <div className="mt-12">
           {isInitialLoading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -280,24 +227,18 @@ export default function Home() {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {articles.map((article, i) => (
-                <ArticleCard
-                  key={article._id}
-                  article={article}
-                  index={i}
-                  onReadMore={handleReadMore}
-                />
+                <ArticleCard key={article._id} article={article} index={i} onReadMore={handleReadMore} />
               ))}
             </div>
           )}
         </div>
 
-        {/* --- Load More Button --- */}
         <div className="text-center mt-12">
           {isLoadingMore && <p className="animate-pulse">Loading more...</p>}
           {hasMore && !isLoadingMore && (
             <button
               onClick={() => setPage((p) => p + 1)}
-              className="px-6 py-3 bg-[#1E6B2B] text-white font-semibold rounded-lg hover:bg-[#77BFA1] transition-all"
+              className="px-6 py-3 bg-[#00c853] text-white font-semibold rounded-lg hover:bg-[#4caf50] transition-all"
             >
               Load More
             </button>

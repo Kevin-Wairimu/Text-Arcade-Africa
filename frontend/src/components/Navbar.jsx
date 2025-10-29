@@ -6,7 +6,9 @@ import { useAlert } from "../context/AlertContext";
 import Logo from "./Logo";
 
 export default function Nav() {
-  const [scrolled, setScrolled] = useState(false);
+  // --- REMOVED: The 'scrolled' state is no longer needed ---
+  // const [scrolled, setScrolled] = useState(false);
+  
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { showAlert } = useAlert();
@@ -22,14 +24,15 @@ export default function Nav() {
     { name: "Contact", to: "/contact" },
   ];
 
-  // Effect to handle navbar background change on scroll
+  // --- REMOVED: The scroll event listener is no longer needed ---
+  /*
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+  */
 
-  // Handler for user logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
@@ -42,12 +45,9 @@ export default function Nav() {
 
   // --- RENDER METHOD ---
   return (
+    // --- UPDATED: Removed conditional logic to make the background always solid ---
     <header
-      className={`fixed w-full top-0 z-50 transition-all duration-300 ease-in-out ${
-        scrolled
-          ? "bg-[#111827]/80 backdrop-blur-lg border-b border-white/10 shadow-lg"
-          : "bg-transparent border-b border-transparent"
-      }`}
+      className="fixed w-full top-0 z-50 bg-[#111827]/80 backdrop-blur-lg border-b border-white/10 shadow-lg"
     >
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
         {/* --- Logo Section --- */}
@@ -59,11 +59,8 @@ export default function Nav() {
             <Logo size={44} mode="icon" />
           </motion.div>
           <div>
-            <div
-              className={`font-extrabold text-xl tracking-tight transition-colors ${
-                scrolled ? "text-white" : "text-white"
-              }`}
-            >
+            {/* --- SIMPLIFIED: Redundant class logic removed --- */}
+            <div className="font-extrabold text-xl text-white tracking-tight">
               Text Africa Arcade
             </div>
             <div className="text-xs text-gray-300 italic">

@@ -1,15 +1,12 @@
 const express = require('express');
 const router = express.Router();
-
-// Import the entire controller object
 const authController = require('../controllers/authController');
 
-// Add a console.log to see what is being imported
-console.log('Imported authController for routing:', authController);
+console.log('authRoutes loaded:', Object.keys(authController));
 
-// Attach the functions from the controller object to the routes
+// PUBLIC ROUTES
 router.post('/login', authController.login);
-router.post('/register', authController.register); 
+router.post('/register', authController.register);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password/:token', authController.resetPassword);
 
