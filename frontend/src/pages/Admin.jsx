@@ -358,7 +358,7 @@ export default function Admin() {
                 label: "Categories",
                 value: Object.keys(stats.categories).length,
               },
-              { label: "Total Views", value: stats.views },
+              // { label: "Total Views", value: stats.views },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
