@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://text-africa-arcade.netlify.app/sitemap.xml

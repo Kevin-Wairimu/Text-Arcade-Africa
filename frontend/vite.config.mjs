@@ -3,12 +3,23 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+
+  // ✅ Base path ensures assets load correctly on Netlify or any subpath
+  base: "/",
+
   server: {
     port: 5173,
     open: true,
-    historyApiFallback: true, // ✅ Vite handles client-side routing automatically
   },
+
+  // ✅ Build settings
   build: {
     outDir: "dist",
+    emptyOutDir: true, // Clears previous build before new one
+  },
+
+  // ✅ Fallback for React Router (handled by Netlify too, but helps local dev)
+  optimizeDeps: {
+    include: ["react", "react-dom"],
   },
 });
