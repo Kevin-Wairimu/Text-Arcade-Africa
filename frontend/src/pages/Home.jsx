@@ -1,4 +1,3 @@
-// src/pages/Home.jsx
 import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -59,7 +58,8 @@ SkeletonCard.displayName = "SkeletonCard";
 
 // --- Article Card ---
 const ArticleCard = memo(({ article, index, onReadMore }) => {
-  const imageUrl = article.image || "https://via.placeholder.com/400x200?text=No+Image";
+  const imageUrl =
+    article.image || "https://via.placeholder.com/400x200?text=No+Image";
   return (
     <motion.div
       custom={index}
@@ -93,7 +93,10 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
           {(article.content || "No content available...").slice(0, 120)}...
         </p>
         <button
-          onClick={(e) => { e.stopPropagation(); onReadMore(article._id); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onReadMore(article._id);
+          }}
           className="mt-4 text-[#2E7D32]/80 hover:text-[#2E7D32] font-medium text-sm self-start transition-colors z-10 relative"
         >
           Read More
@@ -104,22 +107,19 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
 });
 ArticleCard.displayName = "ArticleCard";
 
-// --- Categories ---
 const CATEGORY_MAP = {
   All: "",
   "Media Review": "Media Review",
   "Expert Insights": "Expert Insights",
-  "Reflections": "Reflections",
-  "Technology": "Technology",
-  "Events": "Events",
-  "Digest": "Digest",
-  "Innovation": "Innovation",
-  "Expert View": "Expert View",
-  "Trends": "Trends",
+  Reflections: "Reflections",
+  Technology: "Technology",
+  Events: "Events",
+  Digest: "Digest",
+  Innovation: "Innovation",
+  Trends: "Trends",
 };
 const getApiCategory = (label) => CATEGORY_MAP[label] ?? label;
 
-// --- Main Component ---
 export default function Home() {
   const navigate = useNavigate();
   const [articles, setArticles] = useState([]);
@@ -135,49 +135,66 @@ export default function Home() {
 
   const categories = useMemo(() => Object.keys(CATEGORY_MAP), []);
 
-  const fetchArticles = useCallback(async (fresh) => {
-    if (isFetching) return;
-    setIsFetching(true);
-    fresh ? setIsInitialLoading(true) : setIsLoadingMore(true);
-    if (fresh) { setArticles([]); setPage(1); }
-    setError("");
-    try {
-      const params = new URLSearchParams({ page: fresh ? "1" : page.toString(), limit: limit.toString() });
-      const apiCat = getApiCategory(category);
-      if (category !== "All" && apiCat) params.append("category", apiCat);
-      if (searchTerm.trim()) params.append("search", searchTerm.trim());
-      const { data } = await API.get(`/api/articles?${params.toString()}`);
-      setArticles((prev) => (fresh ? data.articles : [...prev, ...data.articles]));
-      setTotalArticles(data.total ?? 0);
-    } catch {
-      setError("Failed to load articles. Please try again later.");
-    } finally {
-      setIsInitialLoading(false);
-      setIsLoadingMore(false);
-      setIsFetching(false);
-    }
-  }, [category, searchTerm, page, limit, isFetching]);
+  const fetchArticles = useCallback(
+    async (fresh) => {
+      if (isFetching) return;
+      setIsFetching(true);
+      fresh ? setIsInitialLoading(true) : setIsLoadingMore(true);
+      if (fresh) {
+        setArticles([]);
+        setPage(1);
+      }
+      setError("");
+      try {
+        const params = new URLSearchParams({
+          page: fresh ? "1" : page.toString(),
+          limit: limit.toString(),
+        });
+        const apiCat = getApiCategory(category);
+        if (category !== "All" && apiCat) params.append("category", apiCat);
+        if (searchTerm.trim()) params.append("search", searchTerm.trim());
+        const { data } = await API.get(`/api/articles?${params.toString()}`);
+        setArticles((prev) => (fresh ? data.articles : [...prev, ...data.articles]));
+        setTotalArticles(data.total ?? 0);
+      } catch {
+        setError("Failed to load articles. Please try again later.");
+      } finally {
+        setIsInitialLoading(false);
+        setIsLoadingMore(false);
+        setIsFetching(false);
+      }
+    },
+    [category, searchTerm, page, limit, isFetching]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => fetchArticles(true), 300);
     return () => clearTimeout(timer);
   }, [category, searchTerm]);
 
-  useEffect(() => { if (page > 1) fetchArticles(false); }, [page]);
+  useEffect(() => {
+    if (page > 1) fetchArticles(false);
+  }, [page]);
 
-  const handleReadMore = useCallback((id) => id && navigate(`/article/${id}`), [navigate]);
+  const handleReadMore = useCallback(
+    (id) => id && navigate(`/article/${id}`),
+    [navigate]
+  );
+
   const hasMore = articles.length < totalArticles;
 
   const heroImages = [
-    "https://images.unsplash.com/photo-1556761175-5973dc0f32e7",
-    "https://images.unsplash.com/photo-1522202176988-66273c2fd55f",
-    "https://images.unsplash.com/photo-1600880292203-757bb62b4baf",
+    "https://images.unsplash.com/photo-1653566031489-78ae0fa0872c?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170",
+    "https://plus.unsplash.com/premium_photo-1742404279460-f5ac4d0062a3?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDEyfHx8ZW58MHx8fHx8&auto=format&fit=crop&q=60&w=500",
+    "https://images.unsplash.com/photo-1739302750702-e26a61113758?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170",
   ];
 
   return (
     <main className="bg-white text-[#2E7D32] min-h-screen">
+      {/* ✅ Hero section now full-screen, visible, perfectly blended */}
       <Hero backgroundImages={heroImages} />
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+
+      <section id="articles" className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
         <motion.h2
           variants={fadeIn}
           initial="hidden"
@@ -196,7 +213,9 @@ export default function Home() {
                 key={label}
                 onClick={() => setCategory(label)}
                 className={`px-4 py-2 rounded-full font-medium text-sm transition-all ${
-                  category === label ? "bg-[#2E7D32] text-white shadow-md" : "bg-[#81C784]/30 text-[#2E7D32] hover:bg-[#2E7D32]/50"
+                  category === label
+                    ? "bg-[#2E7D32] text-white shadow-md"
+                    : "bg-[#81C784]/30 text-[#2E7D32] hover:bg-[#2E7D32]/50"
                 }`}
               >
                 {label}
@@ -213,7 +232,10 @@ export default function Home() {
             />
             {(category !== "All" || searchTerm) && (
               <button
-                onClick={() => { setCategory("All"); setSearchTerm(""); }}
+                onClick={() => {
+                  setCategory("All");
+                  setSearchTerm("");
+                }}
                 className="px-4 py-3 bg-[#81C784] rounded-lg hover:bg-[#2E7D32] text-white text-sm font-medium"
               >
                 Clear
@@ -226,19 +248,28 @@ export default function Home() {
         <div className="mt-12">
           {isInitialLoading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {Array.from({ length: limit }).map((_, i) => <SkeletonCard key={i} />)}
+              {Array.from({ length: limit }).map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
             </div>
           ) : error ? (
             <div className="text-center text-red-600 p-5 rounded-xl">
               <p>{error}</p>
-              <button onClick={() => fetchArticles(true)} className="mt-3 underline">Retry</button>
+              <button onClick={() => fetchArticles(true)} className="mt-3 underline">
+                Retry
+              </button>
             </div>
           ) : articles.length === 0 ? (
             <p className="text-center text-[#2E7D32]">No articles found.</p>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {articles.map((article, i) => (
-                <ArticleCard key={article._id} article={article} index={i} onReadMore={handleReadMore} />
+                <ArticleCard
+                  key={article._id}
+                  article={article}
+                  index={i}
+                  onReadMore={handleReadMore}
+                />
               ))}
             </div>
           )}
@@ -246,7 +277,9 @@ export default function Home() {
 
         {/* Load More */}
         <div className="text-center mt-12">
-          {isLoadingMore && <p className="animate-pulse text-[#2E7D32]">Loading more...</p>}
+          {isLoadingMore && (
+            <p className="animate-pulse text-[#2E7D32]">Loading more...</p>
+          )}
           {hasMore && !isLoadingMore && (
             <button
               onClick={() => setPage((p) => p + 1)}

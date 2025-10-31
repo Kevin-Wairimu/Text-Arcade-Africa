@@ -32,9 +32,9 @@ export default function Nav() {
     role === "Admin" || role === "Employee" ? "/admin" : "/client";
 
   return (
-    <header className="fixed w-full top-0 z-50 bg-[#1E6B2B] shadow-md">
+    <header className="fixed w-full top-0 z-50 bg-white shadow-md">
+      {/* --- No changes needed in the header/desktop nav --- */}
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-3 group">
           <motion.div
             whileHover={{ scale: 1.1, rotate: 5 }}
@@ -43,25 +43,23 @@ export default function Nav() {
             <Logo size={44} mode="icon" />
           </motion.div>
           <div>
-            <div className="font-extrabold text-xl text-white tracking-tight">
+            <div className="font-extrabold text-xl text-[#1E6B2B] tracking-tight">
               Text Africa Arcade
             </div>
-            <div className="text-xs text-white/80 italic">
+            <div className="text-xs text-[#1E6B2B]/80 italic">
               Digital transformation for text products
             </div>
           </div>
         </Link>
-
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-6 font-medium text-white">
+        <nav className="hidden md:flex items-center gap-6 font-medium text-[#1E6B2B]">
           {navLinks.map((link) => (
             <NavLink
               key={link.name}
               to={link.to}
               className={({ isActive }) =>
-                `transition-colors hover:text-[#81C784] ${
+                `transition-colors hover:text-[#1E6B2B]/70 ${
                   isActive
-                    ? "text-[#81C784] border-b-2 border-[#81C784] pb-1"
+                    ? "font-bold border-b-2 border-[#1E6B2B] pb-1"
                     : ""
                 }`
               }
@@ -69,20 +67,18 @@ export default function Nav() {
               {link.name}
             </NavLink>
           ))}
-
-          {/* Auth Buttons */}
           <div className="flex items-center gap-2 pl-4">
             {token ? (
               <>
                 <NavLink
                   to={dashboardPath}
-                  className="hover:text-[#81C784] transition-colors"
+                  className="hover:text-[#1E6B2B]/70 transition-colors"
                 >
                   Dashboard
                 </NavLink>
                 <button
                   onClick={handleLogout}
-                  className="bg-white text-[#1E6B2B] text-sm px-4 py-2 rounded-full hover:bg-[#81C784] hover:text-white transition-all duration-300"
+                  className="bg-[#1E6B2B] text-white text-sm px-4 py-2 rounded-full hover:bg-[#1E6B2B]/90 transition-all duration-300"
                 >
                   Logout
                 </button>
@@ -91,13 +87,13 @@ export default function Nav() {
               <>
                 <Link
                   to="/login"
-                  className="bg-white text-[#1E6B2B] hover:bg-[#81C784] hover:text-white text-sm px-4 py-2 rounded-full transition-all duration-300"
+                  className="bg-[#1E6B2B] text-white hover:bg-[#1E6B2B]/90 text-sm px-4 py-2 rounded-full transition-all duration-300"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="border border-white text-white hover:bg-white hover:text-[#1E6B2B] text-sm px-4 py-2 rounded-full transition-all duration-300"
+                  className="border border-[#1E6B2B] text-[#1E6B2B] hover:bg-[#1E6B2B] hover:text-white text-sm px-4 py-2 rounded-full transition-all duration-300"
                 >
                   Register
                 </Link>
@@ -105,10 +101,8 @@ export default function Nav() {
             )}
           </div>
         </nav>
-
-        {/* Mobile Menu Icon */}
         <motion.button
-          className="md:hidden text-white focus:outline-none z-50"
+          className="md:hidden text-[#1E6B2B] focus:outline-none z-50"
           onClick={() => setMenuOpen(!menuOpen)}
           whileTap={{ scale: 0.9 }}
           aria-label="Toggle menu"
@@ -117,11 +111,10 @@ export default function Nav() {
         </motion.button>
       </div>
 
-      {/* Mobile Menu */}
+      {/* --- Changes are in the Mobile Menu section --- */}
       <AnimatePresence>
         {menuOpen && (
           <>
-            {/* Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
@@ -129,20 +122,17 @@ export default function Nav() {
               className="fixed inset-0 bg-black/40 z-40 md:hidden"
               onClick={() => setMenuOpen(false)}
             />
-
-            {/* Sidebar */}
             <motion.nav
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
-              className="fixed top-0 right-0 h-full w-4/5 max-w-sm bg-[#1E6B2B] z-50 flex flex-col p-8 shadow-2xl text-white"
+              className="fixed top-0 right-0 h-full w-4/5 max-w-sm bg-white z-50 flex flex-col p-8 shadow-2xl text-[#1E6B2B]"
             >
-              {/* Close Button */}
               <div className="flex justify-end mb-6">
                 <button
                   onClick={() => setMenuOpen(false)}
-                  className="text-white focus:outline-none hover:text-[#81C784]"
+                  className="text-[#1E6B2B] focus:outline-none hover:text-[#1E6B2B]/70"
                 >
                   <X size={28} />
                 </button>
@@ -155,10 +145,11 @@ export default function Nav() {
                     key={`mobile-${link.name}`}
                     to={link.to}
                     onClick={() => setMenuOpen(false)}
+                    // ✅ FIX: Changed active class from "text-white" to a visible color.
                     className={({ isActive }) =>
                       isActive
-                        ? "font-semibold text-[#81C784]"
-                        : "hover:text-[#77BFA1] transition-colors"
+                        ? "font-bold text-[#1E6B2B] underline"
+                        : "hover:text-[#1E6B2B]/70 transition-colors"
                     }
                   >
                     {link.name}
@@ -167,13 +158,20 @@ export default function Nav() {
               </div>
 
               {/* Mobile Auth */}
-              <div className="border-t border-white/30 mt-8 pt-6 flex flex-col gap-4">
+              <div className="border-t border-[#1E6B2B]/30 mt-8 pt-6 flex flex-col gap-4">
                 {token ? (
                   <>
                     <NavLink
                       to={dashboardPath}
                       onClick={() => setMenuOpen(false)}
-                      className="text-white text-xl font-medium hover:text-[#81C784] transition-colors"
+                      // ✅ FIX: Applied the same active/inactive styling for consistency and readability.
+                      className={({ isActive }) =>
+                        `text-xl font-medium transition-colors ${
+                          isActive
+                            ? "font-bold text-[#1E6B2B] underline"
+                            : "text-[#1E6B2B] hover:text-[#1E6B2B]/70"
+                        }`
+                      }
                     >
                       Dashboard
                     </NavLink>
@@ -182,7 +180,7 @@ export default function Nav() {
                         handleLogout();
                         setMenuOpen(false);
                       }}
-                      className="w-full text-center bg-white text-[#1E6B2B] py-2.5 rounded-full hover:bg-[#81C784] hover:text-white transition-colors"
+                      className="w-full text-center bg-[#1E6B2B] text-white py-2.5 rounded-full hover:bg-[#1E6B2B]/90 transition-colors"
                     >
                       Logout
                     </button>
@@ -192,22 +190,21 @@ export default function Nav() {
                     <Link
                       to="/login"
                       onClick={() => setMenuOpen(false)}
-                      className="w-full text-center bg-white text-[#1E6B2B] py-2.5 rounded-full hover:bg-[#81C784] hover:text-white transition-colors"
+                      className="w-full text-center bg-[#1E6B2B] text-white py-2.5 rounded-full hover:bg-[#1E6B2B]/90 transition-colors"
                     >
                       Login
                     </Link>
                     <Link
                       to="/register"
                       onClick={() => setMenuOpen(false)}
-                      className="w-full text-center border border-white text-white hover:bg-white hover:text-[#1E6B2B] py-2.5 rounded-full transition-colors"
+                      className="w-full text-center border border-[#1E6B2B] text-[#1E6B2B] hover:bg-[#1E6B2B] hover:text-white py-2.5 rounded-full transition-colors"
                     >
                       Register
                     </Link>
                   </>
                 )}
               </div>
-
-              <div className="mt-auto text-sm text-white/70">
+              <div className="mt-auto text-sm text-[#1E6B2B]/70">
                 <p>© {new Date().getFullYear()} Text Africa Arcade</p>
               </div>
             </motion.nav>

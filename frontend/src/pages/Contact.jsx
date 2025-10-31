@@ -83,7 +83,7 @@ export default function Contact() {
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
-            className="text-gray-200 max-w-2xl mx-auto text-lg leading-relaxed drop-shadow-sm"
+            className="text-white max-w-2xl mx-auto text-lg leading-relaxed drop-shadow-md"
           >
             Let’s talk about partnerships, projects, or digital transformation for your newsroom.
           </motion.p>
@@ -96,7 +96,7 @@ export default function Contact() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.2 }}
-          className="bg-[#2E7D32]/20 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-[#2E7D32]/50 max-w-2xl mx-auto"
+          className="bg-white/20 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-white/50 max-w-2xl mx-auto"
         >
           <div className="grid gap-5">
             {/* Name */}
@@ -107,11 +107,9 @@ export default function Contact() {
                 placeholder="Full Name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className={`w-full p-3 rounded-lg bg-[#2E7D32]/10 text-white placeholder-gray-300 border ${
-                  errors.name ? "border-red-500" : "border-[#77BFA1]/40"
-                } focus:outline-none focus:ring-2 focus:ring-[#77BFA1] transition`}
+                className="w-full p-3 rounded-lg bg-white/10 text-white placeholder-white/70 border border-white/40 focus:outline-none focus:ring-2 focus:ring-white transition shadow-sm"
               />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+              {errors.name && <p className="text-red-400 text-sm mt-1 drop-shadow-sm">{errors.name}</p>}
             </div>
 
             {/* Email */}
@@ -122,11 +120,9 @@ export default function Contact() {
                 placeholder="Email Address"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className={`w-full p-3 rounded-lg bg-[#2E7D32]/10 text-white placeholder-gray-300 border ${
-                  errors.email ? "border-red-500" : "border-[#77BFA1]/40"
-                } focus:outline-none focus:ring-2 focus:ring-[#77BFA1] transition`}
+                className="w-full p-3 rounded-lg bg-white/10 text-white placeholder-white/70 border border-white/40 focus:outline-none focus:ring-2 focus:ring-white transition shadow-sm"
               />
-              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+              {errors.email && <p className="text-red-400 text-sm mt-1 drop-shadow-sm">{errors.email}</p>}
             </div>
 
             {/* Message */}
@@ -137,11 +133,9 @@ export default function Contact() {
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 rows={5}
-                className={`w-full p-3 rounded-lg bg-[#2E7D32]/10 text-white placeholder-gray-300 border ${
-                  errors.message ? "border-red-500" : "border-[#77BFA1]/40"
-                } focus:outline-none focus:ring-2 focus:ring-[#77BFA1] transition`}
+                className="w-full p-3 rounded-lg bg-white/10 text-white placeholder-white/70 border border-white/40 focus:outline-none focus:ring-2 focus:ring-white transition shadow-sm"
               />
-              {errors.message && <p className="text-red-500 text-sm mt-1">{errors.message}</p>}
+              {errors.message && <p className="text-red-400 text-sm mt-1 drop-shadow-sm">{errors.message}</p>}
             </div>
           </div>
 
@@ -150,7 +144,7 @@ export default function Contact() {
             whileTap={{ scale: 0.97 }}
             type="submit"
             disabled={loading}
-            className="w-full py-3 mt-8 bg-white text-[#2E7D32] rounded-lg font-semibold tracking-wide hover:bg-[#77BFA1] hover:text-white transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(119,191,161,0.3)]"
+            className="w-full py-3 mt-8 bg-[#2E7D32] text-white rounded-lg font-semibold tracking-wide hover:bg-[#77BFA1] hover:text-white transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-[#77BFA1]/30"
           >
             {loading ? "Sending..." : "Send Message"}
           </motion.button>
