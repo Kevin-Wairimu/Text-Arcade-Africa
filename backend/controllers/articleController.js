@@ -62,20 +62,36 @@ exports.getArticleById = async (req, res) => {
       `GET /api/articles/${req.params.id} by user:`,
       req.user?.email || "unknown"
     );
-    const article = await Article.findById(req.params.id).lean();
+
+    // Increment views atomically
+    const article = await Article.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true, lean: true }
+    );
+
     if (!article) {
       console.log("Article not found:", req.params.id);
       return res.status(404).json({ error: "Article not found" });
     }
-    console.log("Article found:", article._id);
+
+    // Emit event for Admin dashboards
+    if (req.io) {
+      req.io.emit("viewsUpdated", {
+        articleId: article._id,
+        totalViews: article.views,
+      });
+    }
+
+    console.log("Article viewed:", article._id, "Total views:", article.views);
     res.status(200).json(article);
   } catch (err) {
-    console.error("Error fetching article:", err.message, err.stack);
-    res
-      .status(500)
-      .json({ error: "Failed to fetch article", details: err.message });
+    console.error("Error fetching article:", err.message);
+    res.status(500).json({ error: "Failed to fetch article", details: err.message });
   }
 };
+
+
 
 exports.createArticle = async (req, res) => {
   try {

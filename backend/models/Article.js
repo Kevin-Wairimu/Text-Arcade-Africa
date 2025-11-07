@@ -20,6 +20,8 @@ const ArticleSchema = new mongoose.Schema(
         "Innovation",
         "Expert View",
         "Trends",
+        "Reports",
+        "Archives"
       ],
       default: "General",
     },

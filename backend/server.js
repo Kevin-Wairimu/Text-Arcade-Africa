@@ -106,6 +106,7 @@ app.use((err, req, res, next) => {
 });
 
 // ✅ MongoDB Connection
+// ✅ MongoDB Connection
 mongoose.set("strictQuery", true);
 const dbURI = process.env.MONGO_URI;
 
@@ -116,6 +117,9 @@ if (!dbURI) {
 
 console.log("⏳ Connecting to MongoDB Atlas...");
 
+const http = require("http");
+const { Server } = require("socket.io");
+
 mongoose
   .connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(async () => {
@@ -125,7 +129,28 @@ mongoose
     const collections = await mongoose.connection.db.listCollections().toArray();
     console.log("📚 Collections:", collections.map(c => c.name).join(", ") || "none");
 
-    app.listen(PORT, "0.0.0.0", () => {
+    // ✅ Setup HTTP + WebSocket
+    const server = http.createServer(app);
+    const io = new Server(server, {
+      cors: {
+        origin: allowedOrigins,
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        credentials: true,
+      },
+    });
+
+    // Middleware to attach io instance to every request
+    app.use((req, res, next) => {
+      req.io = io;
+      next();
+    });
+
+    io.on("connection", (socket) => {
+      console.log("🟢 New WebSocket connection:", socket.id);
+      socket.on("disconnect", () => console.log("🔴 Disconnected:", socket.id));
+    });
+
+    server.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌐 Public URL: https://text-arcade-africa.onrender.com`);
     });

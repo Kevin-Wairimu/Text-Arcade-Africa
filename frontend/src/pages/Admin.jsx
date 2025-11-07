@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import API from "../utils/api";
 import imageCompression from "browser-image-compression";
 import { motion } from "framer-motion";
+import { io } from "socket.io-client";
 
 // --- Animation Config ---
 const fadeIn = {
@@ -14,7 +15,6 @@ const fadeIn = {
   }),
 };
 
-// --- Category Options ---
 const categories = [
   "Media Review",
   "Expert Insights",
@@ -23,16 +23,14 @@ const categories = [
   "Events",
   "Digest",
   "Innovation",
-  // "Expert View",
   "Trends",
   "General",
+  "Reports",
+  "Archives",
 ];
 
-// --- Main Admin Component ---
 export default function Admin() {
   const navigate = useNavigate();
-
-  // --- Data States ---
   const [articles, setArticles] = useState([]);
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState({
@@ -44,7 +42,7 @@ export default function Admin() {
   const [settings, setSettings] = useState({
     siteTitle: "",
     defaultCategory: "General",
-    theme: "dark",
+    theme: "light",
   });
   const [form, setForm] = useState({
     title: "",
@@ -55,8 +53,6 @@ export default function Admin() {
     image: "",
   });
   const [editingArticle, setEditingArticle] = useState(null);
-
-  // --- UI States ---
   const [menuOpen, setMenuOpen] = useState(
     () => localStorage.getItem("adminMenuOpen") || "dashboard"
   );
@@ -68,10 +64,8 @@ export default function Admin() {
     settings: true,
   });
   const [error, setError] = useState({ articles: "", users: "", settings: "" });
-
   const token = localStorage.getItem("token");
 
-  // --- Side Effects for Data Fetching & State Persistence ---
   useEffect(() => localStorage.setItem("adminMenuOpen", menuOpen), [menuOpen]);
 
   useEffect(() => {
@@ -88,7 +82,6 @@ export default function Admin() {
     fetchData();
   }, [menuOpen, token]);
 
-  // --- API Functions ---
   const apiCall = async (method, url, payload, errorKey) => {
     try {
       const response = await API[method](url, payload, {
@@ -96,12 +89,12 @@ export default function Admin() {
       });
       return response.data;
     } catch (err) {
-      const errorMessage = `Failed to ${errorKey}: ${
+      const msg = `Failed to ${errorKey}: ${
         err.response?.data?.details || err.message
       }`;
-      setError((prev) => ({ ...prev, [errorKey]: errorMessage }));
+      setError((p) => ({ ...p, [errorKey]: msg }));
       if (err.response?.status === 401) navigate("/login");
-      throw err; // Re-throw to be caught by caller
+      throw err;
     }
   };
 
@@ -109,11 +102,9 @@ export default function Admin() {
     setIsLoading((p) => ({ ...p, articles: true }));
     try {
       const data = await apiCall("get", "/articles", null, "articles");
-      const articlesArray = Array.isArray(data.articles) ? data.articles : [];
-      setArticles(articlesArray);
-      calculateStats(articlesArray);
-    } catch (err) {
-      /* Error handled in apiCall */
+      const arr = Array.isArray(data.articles) ? data.articles : [];
+      setArticles(arr);
+      calculateStats(arr);
     } finally {
       setIsLoading((p) => ({ ...p, articles: false }));
     }
@@ -124,8 +115,6 @@ export default function Admin() {
     try {
       const data = await apiCall("get", "/users", null, "users");
       setUsers(Array.isArray(data.users) ? data.users : []);
-    } catch (err) {
-      /* Error handled in apiCall */
     } finally {
       setIsLoading((p) => ({ ...p, users: false }));
     }
@@ -136,31 +125,26 @@ export default function Admin() {
     try {
       const data = await apiCall("get", "/settings", null, "settings");
       setSettings(
-        data || { siteTitle: "", defaultCategory: "General", theme: "dark" }
+        data || { siteTitle: "", defaultCategory: "General", theme: "light" }
       );
-    } catch (err) {
-      /* Error handled in apiCall */
     } finally {
       setIsLoading((p) => ({ ...p, settings: false }));
     }
   };
 
-  // --- Form & Action Handlers ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     const payload = { ...form, author: form.author || "Text Africa Arcade" };
     try {
-      if (editingArticle) {
+      if (editingArticle)
         await apiCall(
           "put",
           `/articles/${editingArticle}`,
           payload,
           "articles"
         );
-      } else {
-        await apiCall("post", "/articles", payload, "articles");
-      }
+      else await apiCall("post", "/articles", payload, "articles");
       await fetchArticles();
       setForm({
         title: "",
@@ -171,8 +155,6 @@ export default function Admin() {
         image: "",
       });
       setEditingArticle(null);
-    } catch (err) {
-      /* Error handled in apiCall */
     } finally {
       setIsSubmitting(false);
     }
@@ -180,66 +162,20 @@ export default function Admin() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this article permanently?")) return;
-    try {
-      await apiCall("delete", `/articles/${id}`, null, "articles");
-      await fetchArticles();
-    } catch (err) {
-      /* Error handled in apiCall */
-    }
+    await apiCall("delete", `/articles/${id}`, null, "articles");
+    await fetchArticles();
   };
 
-  const handleToggleSuspend = async (userId, currentSuspended) => {
-    if (
-      !window.confirm(
-        `${currentSuspended ? "Unsuspend" : "Suspend"} this user?`
-      )
-    )
-      return;
-    try {
-      await apiCall(
-        "put",
-        `/users/${userId}/suspend`,
-        { suspended: !currentSuspended },
-        "users"
-      );
-      setUsers((prev) =>
-        prev.map((u) =>
-          u._id === userId ? { ...u, suspended: !currentSuspended } : u
-        )
-      );
-    } catch (err) {
-      /* Error handled in apiCall */
-    }
-  };
-
-  const handleSettingsSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading((p) => ({ ...p, settings: true }));
-    try {
-      await apiCall("put", "/settings", settings, "settings");
-      alert("Settings saved!");
-    } catch (err) {
-      /* Error handled in apiCall */
-    } finally {
-      setIsLoading((p) => ({ ...p, settings: false }));
-    }
-  };
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const compressed = await imageCompression(file, {
-        maxSizeMB: 1,
-        useWebWorker: true,
-      });
-      const reader = new FileReader();
-      reader.onloadend = () =>
-        setForm((prev) => ({ ...prev, image: reader.result }));
-      reader.readAsDataURL(compressed);
-    } catch (err) {
-      alert("Failed to upload image.");
-    }
+  const calculateStats = (data) => {
+    const total = data.length;
+    const featured = data.filter((a) => a.featured).length;
+    const views = data.reduce((acc, a) => acc + (a.views || 0), 0);
+    const categories = data.reduce((acc, a) => {
+      const c = a.category || "General";
+      acc[c] = (acc[c] || 0) + 1;
+      return acc;
+    }, {});
+    setStats({ total, featured, categories, views });
   };
 
   const handleLogout = () => {
@@ -247,30 +183,71 @@ export default function Admin() {
     navigate("/");
   };
 
-  const calculateStats = (data) => {
-    const total = data.length;
-    const featured = data.filter((a) => a.featured).length;
-    const views = data.reduce((acc, a) => acc + (a.views || 0), 0);
-    const categoriesObj = data.reduce((acc, a) => {
-      const c = a.category || "General";
-      acc[c] = (acc[c] || 0) + 1;
-      return acc;
-    }, {});
-    setStats({ total, featured, categories: categoriesObj, views });
+  const handleEdit = (article) => {
+    setForm({
+      title: article.title,
+      content: article.content,
+      author: article.author,
+      category: article.category,
+      featured: article.featured,
+      image: article.image,
+    });
+    setEditingArticle(article._id);
+    setMenuOpen("articles");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const formattedDate = (dateString) =>
-    new Date(dateString || Date.now()).toLocaleDateString();
+  // --- Image upload + compression + preview ---
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1600,
+        useWebWorker: true,
+      });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm((prev) => ({ ...prev, image: reader.result }));
+      };
+      reader.readAsDataURL(compressed);
+    } catch (err) {
+      console.error("Image upload failed", err);
+      alert("Failed to upload/compress image.");
+    }
+  };
+
+  const socket = io(import.meta.env.VITE_API_URL);
+
+  useEffect(() => {
+    socket.on("connect", () =>
+      console.log("🟢 Connected to socket:", socket.id)
+    );
+    socket.on("disconnect", () => console.log("🔴 Socket disconnected"));
+
+    // Listen for real-time view updates
+    socket.on("viewsUpdated", (data) => {
+      console.log("📊 Real-time view update:", data);
+      setStats((prev) => ({
+        ...prev,
+        totalViews: prev.totalViews + 1,
+      }));
+    });
+
+    return () => socket.disconnect();
+  }, []);
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gradient-to-b from-[#111827] via-[#0b2818] to-[#111827] text-gray-200">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#E8F5E9] text-[#2E7D32]">
+      {/* --- Mobile Toggle --- */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#1E6B2B]/50 backdrop-blur-sm rounded-lg shadow-lg"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#2E7D32]/90 rounded-lg shadow-md text-white"
         onClick={() => setIsSidebarOpen((s) => !s)}
         aria-label="Toggle menu"
       >
         <svg
-          className="w-6 h-6 text-white"
+          className="w-6 h-6"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -286,29 +263,19 @@ export default function Admin() {
         </svg>
       </button>
 
-      {/* --- SIDEBAR: Updated for full height responsiveness --- */}
+      {/* --- Sidebar (colors inverted: white <-> green) --- */}
       <aside
-        className={`fixed inset-y-0 left-0 w-72 md:w-64 bg-[#111827]/80 backdrop-blur-lg border-r border-white/10 z-40 flex flex-col transform transition-transform duration-300 md:static ${
+        className={`fixed inset-y-0 left-0 w-72 md:w-64 bg-white text-[#2E7D32] border-r border-[#2E7D32]/30 z-40 flex flex-col transform transition-transform duration-300 md:static ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0`}
       >
-        <div className="p-6 flex-shrink-0">
-          <h1 className="text-2xl font-bold text-[#77BFA1] text-center md:text-left">
+        <div className="p-6 border-b border-[#81C784]/30 bg-white">
+          <h1 className="text-2xl font-bold text-center md:text-left text-[#2E7D32]">
             Admin Panel
           </h1>
         </div>
-
-        <div className="flex-grow overflow-y-auto px-6">
-          <nav className="flex flex-col gap-3">
-            <button
-              onClick={() => {
-                navigate("/");
-                setIsSidebarOpen(false);
-              }}
-              className="text-left py-2 px-4 rounded-lg transition hover:bg-white/5 text-gray-300"
-            >
-              Home
-            </button>
+        <div className="flex-grow px-6 py-4 bg-white">
+          <nav className="flex flex-col gap-2">
             {["dashboard", "articles", "users", "settings"].map((key) => (
               <button
                 key={key}
@@ -316,39 +283,61 @@ export default function Admin() {
                   setMenuOpen(key);
                   setIsSidebarOpen(false);
                 }}
-                className={`text-left py-2 px-4 rounded-lg transition ${
+                className={`flex items-center gap-3 text-left py-2 px-4 rounded-lg transition-all focus:outline-none ${
                   menuOpen === key
-                    ? "bg-[#1E6B2B] text-white font-semibold"
-                    : "text-gray-300 hover:bg-white/5 hover:text-white"
+                    ? "bg-[#2E7D32] text-white font-semibold"
+                    : "text-[#2E7D32] hover:bg-[#81C784]/20"
                 }`}
+                aria-current={menuOpen === key}
               >
-                {key.charAt(0).toUpperCase() + key.slice(1)}
+                {/* Icon (color follows text via currentColor) */}
+                <svg
+                  className="w-5 h-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d={
+                      key === "dashboard"
+                        ? "M3 13h8V3H3v10z M13 21h8V11h-8v10z M13 3v6h8V3h-8z"
+                        : key === "articles"
+                        ? "M19 21H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"
+                        : key === "users"
+                        ? "M17 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"
+                        : "M12 8v4l3 3"
+                    }
+                  />
+                </svg>
+                <span className="capitalize">{key}</span>
               </button>
             ))}
           </nav>
         </div>
-
-        <div className="p-6 flex-shrink-0">
+        <div className="p-6 border-t border-[#81C784]/30 bg-white">
           <button
             onClick={handleLogout}
-            className="w-full bg-red-600/80 hover:bg-red-600 text-white py-2.5 rounded-lg"
+            className="w-full bg-[#2E7D32] hover:bg-[#81C784] text-white py-2 rounded-lg font-medium"
           >
             Logout
           </button>
         </div>
       </aside>
 
-      {/* --- MAIN CONTENT --- */}
-      <main className="flex-1 p-6 md:p-10 w-full overflow-y-auto">
+      {/* --- Main --- */}
+      <main className="flex-1 p-6 md:p-10 overflow-y-auto">
         <motion.h2
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-3xl font-bold mb-10 text-center md:text-left text-[#77BFA1]"
+          className="text-3xl font-bold mb-8 text-center md:text-left text-[#2E7D32]"
         >
           {menuOpen.charAt(0).toUpperCase() + menuOpen.slice(1)}
         </motion.h2>
 
-        {/* The rest of your main content remains unchanged... */}
+        {/* --- Dashboard --- */}
         {menuOpen === "dashboard" && (
           <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
             {[
@@ -358,7 +347,7 @@ export default function Admin() {
                 label: "Categories",
                 value: Object.keys(stats.categories).length,
               },
-              // { label: "Total Views", value: stats.views },
+              { label: "Total Views", value: stats.views },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
@@ -366,96 +355,118 @@ export default function Admin() {
                 initial="hidden"
                 animate="visible"
                 custom={i}
-                className="bg-[#0b2818]/70 backdrop-blur-lg p-6 text-center rounded-2xl border border-[#77BFA1]/30"
+                className="bg-white border border-[#2E7D32]/30 rounded-2xl shadow-md p-6 text-center"
               >
-                <h3 className="text-3xl font-bold text-white">{stat.value}</h3>
-                <p className="text-gray-400 mt-1">{stat.label}</p>
+                <h3 className="text-3xl font-bold text-[#2E7D32]">
+                  {stat.value}
+                </h3>
+                <p className="text-sm text-[#2E7D32]/70 mt-1">{stat.label}</p>
               </motion.div>
             ))}
           </section>
         )}
 
+        {/* --- Articles (with image upload + preview restored) --- */}
         {menuOpen === "articles" && (
           <section>
-            {error.articles && (
-              <p className="text-red-400 text-center mb-4">{error.articles}</p>
-            )}
-            <motion.form
+            <form
               onSubmit={handleSubmit}
-              variants={fadeIn}
-              initial="hidden"
-              animate="visible"
-              className="bg-[#0b2818]/70 backdrop-blur-lg border border-[#77BFA1]/30 rounded-2xl p-6 mb-8"
+              className="bg-white border border-[#2E7D32]/30 rounded-2xl shadow-md p-6 mb-8"
             >
-              <h3 className="text-xl font-semibold mb-4 text-white">
-                {editingArticle ? "Edit Article" : "Create New Article"}
+              <h3 className="text-xl font-semibold mb-4 text-[#2E7D32]">
+                {editingArticle ? "Edit Article" : "Add New Article"}
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
                   type="text"
                   placeholder="Title"
+                  className="border border-[#2E7D32]/30 rounded-lg p-2 focus:ring-2 focus:ring-[#81C784] outline-none"
                   value={form.title}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, title: e.target.value }))
-                  }
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
                   required
-                  className="bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
                 />
                 <select
+                  className="border border-[#2E7D32]/30 rounded-lg p-2 focus:ring-2 focus:ring-[#81C784] outline-none"
                   value={form.category}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, category: e.target.value }))
+                    setForm({ ...form, category: e.target.value })
                   }
-                  className="bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
                 >
-                  <option value="" disabled>
-                    Select Category
-                  </option>
                   {categories.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>
                   ))}
                 </select>
-                <input
-                  type="text"
-                  placeholder="Author (optional)"
-                  value={form.author}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, author: e.target.value }))
-                  }
-                  className="sm:col-span-2 bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
-                />
-                <textarea
-                  placeholder="Article content..."
-                  rows={8}
-                  value={form.content}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, content: e.target.value }))
-                  }
-                  required
-                  className="sm:col-span-2 bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
-                />
               </div>
-              <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <input
-                  id="article-image-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="text-gray-400 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1E6B2B] file:text-white hover:file:bg-[#77BFA1]"
-                />
-                <label className="flex items-center gap-2">
+
+              <textarea
+                rows="6"
+                placeholder="Content"
+                className="border border-[#2E7D32]/30 rounded-lg p-2 w-full mt-4 focus:ring-2 focus:ring-[#81C784] outline-none"
+                value={form.content}
+                onChange={(e) => setForm({ ...form, content: e.target.value })}
+                required
+              ></textarea>
+
+              {/* Image upload + preview */}
+              <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#2E7D32]/30 bg-[#E8F5E9] text-[#2E7D32]">
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M8 7l4 4 4-4"
+                      />
+                    </svg>
+                    <span className="text-sm">Choose Image</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {form.image ? (
+                    <div className="w-24 h-16 rounded-lg overflow-hidden border border-[#2E7D32]/30">
+                      <img
+                        src={form.image}
+                        alt="preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-24 h-16 rounded-lg overflow-hidden border border-dashed border-[#2E7D32]/30 flex items-center justify-center text-sm text-[#2E7D32]/60 bg-[#E8F5E9]">
+                      No image
+                    </div>
+                  )}
+                </div>
+
+                <label className="flex items-center gap-2 text-[#2E7D32]">
                   <input
                     type="checkbox"
                     checked={form.featured}
                     onChange={(e) =>
-                      setForm((p) => ({ ...p, featured: e.target.checked }))
+                      setForm({ ...form, featured: e.target.checked })
                     }
-                    className="w-4 h-4 accent-[#77BFA1]"
-                  />{" "}
+                  />
                   Featured
                 </label>
+
                 <div className="flex gap-2">
                   {editingArticle && (
                     <button
@@ -471,7 +482,7 @@ export default function Admin() {
                           image: "",
                         });
                       }}
-                      className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg"
+                      className="bg-white hover:bg-[#E8F5E9] border border-[#2E7D32]/30 px-4 py-2 rounded-lg"
                     >
                       Cancel
                     </button>
@@ -479,206 +490,161 @@ export default function Admin() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="bg-[#1E6B2B] hover:bg-[#77BFA1] text-white font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
+                    className="bg-[#2E7D32] hover:bg-[#81C784] text-white px-6 py-2 rounded-lg font-medium transition-all"
                   >
                     {isSubmitting
                       ? "Saving..."
                       : editingArticle
-                      ? "Update"
-                      : "Publish"}
+                      ? "Update Article"
+                      : "Add Article"}
                   </button>
                 </div>
               </div>
-            </motion.form>
+            </form>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {isLoading.articles ? (
-                <p>Loading...</p>
-              ) : (
-                articles.map((a, i) => (
-                  <motion.div
-                    key={a._id}
-                    variants={fadeIn}
-                    initial="hidden"
-                    animate="visible"
-                    custom={i}
-                    className="bg-[#0b2818]/70 backdrop-blur-lg border border-[#77BFA1]/30 rounded-2xl overflow-hidden flex flex-col"
-                  >
-                    {a.image ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {articles.map((article, i) => (
+                <motion.div
+                  key={article._id || i}
+                  variants={fadeIn}
+                  initial="hidden"
+                  animate="visible"
+                  custom={i}
+                  className="bg-white border border-[#2E7D32]/30 rounded-2xl shadow-md p-5 flex flex-col justify-between"
+                >
+                  <div>
+                    {article.image ? (
                       <img
-                        src={a.image}
-                        alt={a.title}
-                        className="w-full h-40 object-cover"
+                        src={article.image}
+                        alt={article.title}
+                        className="w-full h-40 object-cover rounded-lg mb-3"
                       />
                     ) : (
-                      <div className="w-full h-20 bg-black/20 flex items-center justify-center text-gray-400">
+                      <div className="w-full h-40 bg-[#E8F5E9] rounded-lg mb-3 flex items-center justify-center text-[#2E7D32]/60">
                         No image
                       </div>
                     )}
-                    <div className="p-4 flex-1 flex flex-col">
-                      <h3 className="font-semibold text-white line-clamp-2">
-                        {a.title}
-                      </h3>
-                      <p className="text-gray-400 text-sm mt-1">
-                        {a.category} • {a.views || 0} views
-                      </p>
-                      <div className="mt-auto pt-4 flex justify-between items-center">
-                        <div className="flex gap-4">
-                          <button
-                            onClick={() => {
-                              setEditingArticle(a._id);
-                              setForm(a);
-                              window.scrollTo({ top: 0, behavior: "smooth" });
-                            }}
-                            className="text-[#77BFA1] hover:text-white text-sm"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(a._id)}
-                            className="text-red-500 hover:text-red-400 text-sm"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                        {a.featured && (
-                          <span className="text-xs font-bold text-[#77BFA1]">
-                            Featured
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </section>
-        )}
-
-        {menuOpen === "users" && (
-          <section>
-            {error.users && (
-              <p className="text-red-400 text-center mb-4">{error.users}</p>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {isLoading.users ? (
-                <p>Loading...</p>
-              ) : (
-                users.map((user, i) => (
-                  <motion.div
-                    key={user._id}
-                    variants={fadeIn}
-                    initial="hidden"
-                    animate="visible"
-                    custom={i}
-                    className="bg-[#0b2818]/70 backdrop-blur-lg border border-[#77BFA1]/30 rounded-2xl p-4 flex flex-col"
-                  >
-                    <h4 className="font-semibold text-white">
-                      {user.name || "Unnamed"}
+                    <h4 className="text-xl font-semibold text-[#2E7D32]">
+                      {article.title}
                     </h4>
-                    <p className="text-gray-400 text-sm">{user.email}</p>
-                    <p
-                      className={`text-sm mt-2 font-bold ${
-                        user.suspended ? "text-red-400" : "text-green-400"
-                      }`}
-                    >
-                      {user.suspended ? "SUSPENDED" : "Active"}
+                    <p className="text-sm text-[#2E7D32]/70 mt-1">
+                      {article.category}
                     </p>
+                    <p className="text-sm mt-2 line-clamp-3 text-[#2E7D32]/80">
+                      {article.content}
+                    </p>
+                  </div>
+                  <div className="flex justify-between items-center mt-4">
                     <button
-                      onClick={() =>
-                        handleToggleSuspend(user._id, user.suspended)
-                      }
-                      className={`mt-4 w-full py-2 rounded-lg font-semibold text-sm transition-all ${
-                        user.suspended
-                          ? "bg-green-600 hover:bg-green-500 text-white"
-                          : "bg-red-600 hover:bg-red-500 text-white"
-                      }`}
+                      onClick={() => handleEdit(article)}
+                      className="text-sm text-[#2E7D32] hover:text-[#81C784]"
                     >
-                      {user.suspended ? "Unsuspend" : "Suspend"}
+                      Edit
                     </button>
-                  </motion.div>
-                ))
-              )}
+                    <button
+                      onClick={() => handleDelete(article._id)}
+                      className="text-sm text-red-600 hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </section>
         )}
 
-        {menuOpen === "settings" && (
-          <section>
-            {error.settings && (
-              <p className="text-red-400 text-center mb-4">{error.settings}</p>
-            )}
-            <motion.form
-              onSubmit={handleSettingsSubmit}
-              variants={fadeIn}
-              initial="hidden"
-              animate="visible"
-              className="bg-[#0b2818]/70 backdrop-blur-lg border border-[#77BFA1]/30 rounded-2xl p-6 max-w-2xl mx-auto"
-            >
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Site Title
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.siteTitle}
-                    onChange={(e) =>
-                      setSettings((p) => ({ ...p, siteTitle: e.target.value }))
-                    }
-                    className="bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Default Category
-                  </label>
-                  <select
-                    value={settings.defaultCategory}
-                    onChange={(e) =>
-                      setSettings((p) => ({
-                        ...p,
-                        defaultCategory: e.target.value,
-                      }))
-                    }
-                    className="bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
-                  >
-                    {categories.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
+        {/* --- Users --- */}
+        {menuOpen === "users" && (
+          <section className="bg-white border border-[#2E7D32]/30 rounded-2xl shadow-md p-6">
+            <h3 className="text-xl font-semibold mb-4 text-[#2E7D32]">
+              Registered Users
+            </h3>
+            {users.length === 0 ? (
+              <p className="text-[#2E7D32]/70">No users found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border border-[#2E7D32]/30">
+                  <thead className="bg-[#E8F5E9] text-[#2E7D32]">
+                    <tr>
+                      <th className="p-2 text-left border-b border-[#2E7D32]/30">
+                        Name
+                      </th>
+                      <th className="p-2 text-left border-b border-[#2E7D32]/30">
+                        Email
+                      </th>
+                      <th className="p-2 text-left border-b border-[#2E7D32]/30">
+                        Role
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u._id} className="hover:bg-[#81C784]/10">
+                        <td className="p-2 border-b border-[#2E7D32]/30">
+                          {u.name || "N/A"}
+                        </td>
+                        <td className="p-2 border-b border-[#2E7D32]/30">
+                          {u.email}
+                        </td>
+                        <td className="p-2 border-b border-[#2E7D32]/30 capitalize">
+                          {u.role}
+                        </td>
+                      </tr>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Theme
-                  </label>
-                  <select
-                    value={settings.theme}
-                    onChange={(e) =>
-                      setSettings((p) => ({ ...p, theme: e.target.value }))
-                    }
-                    className="bg-black/20 border border-white/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#77BFA1] w-full"
-                  >
-                    <option value="dark">Dark</option>
-                    <option value="light">Light</option>
-                  </select>
-                </div>
+                  </tbody>
+                </table>
               </div>
-              <div className="mt-6">
-                <button
-                  type="submit"
-                  disabled={isLoading.settings}
-                  className="bg-[#1E6B2B] hover:bg-[#77BFA1] text-white font-semibold px-5 py-2.5 rounded-lg disabled:opacity-50"
-                >
-                  {isLoading.settings ? "Saving..." : "Save Settings"}
-                </button>
-              </div>
-            </motion.form>
+            )}
+          </section>
+        )}
+
+        {/* --- Settings --- */}
+        {menuOpen === "settings" && (
+          <section className="bg-white border border-[#2E7D32]/30 rounded-2xl shadow-md p-6">
+            <h3 className="text-xl font-semibold mb-4 text-[#2E7D32]">
+              Site Settings
+            </h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                apiCall("put", "/settings", settings, "settings");
+              }}
+              className="flex flex-col gap-4"
+            >
+              <input
+                type="text"
+                placeholder="Site Title"
+                className="border border-[#2E7D32]/30 rounded-lg p-2 focus:ring-2 focus:ring-[#81C784] outline-none"
+                value={settings.siteTitle}
+                onChange={(e) =>
+                  setSettings({ ...settings, siteTitle: e.target.value })
+                }
+              />
+              <select
+                className="border border-[#2E7D32]/30 rounded-lg p-2 focus:ring-2 focus:ring-[#81C784] outline-none"
+                value={settings.defaultCategory}
+                onChange={(e) =>
+                  setSettings({ ...settings, defaultCategory: e.target.value })
+                }
+              >
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="bg-[#2E7D32] hover:bg-[#81C784] text-white py-2 rounded-lg font-medium"
+              >
+                Save Settings
+              </button>
+            </form>
           </section>
         )}
       </main>
     </div>
   );
 }
+

@@ -117,6 +117,8 @@ const CATEGORY_MAP = {
   Digest: "Digest",
   Innovation: "Innovation",
   Trends: "Trends",
+  Reports:"Reports",
+  Archives:"Archives"
 };
 const getApiCategory = (label) => CATEGORY_MAP[label] ?? label;
 
