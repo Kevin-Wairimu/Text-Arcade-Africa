@@ -15,6 +15,7 @@ const fadeIn = {
   }),
 };
 
+// --- Article Categories ---
 const categories = [
   "Media Review",
   "Expert Insights",
@@ -38,6 +39,7 @@ export default function Admin() {
     featured: 0,
     categories: {},
     views: 0,
+    totalViews: 0,
   });
   const [settings, setSettings] = useState({
     siteTitle: "",
@@ -51,6 +53,7 @@ export default function Admin() {
     category: "General",
     featured: false,
     image: "",
+    link: "",
   });
   const [editingArticle, setEditingArticle] = useState(null);
   const [menuOpen, setMenuOpen] = useState(
@@ -66,8 +69,17 @@ export default function Admin() {
   const [error, setError] = useState({ articles: "", users: "", settings: "" });
   const token = localStorage.getItem("token");
 
+const generateSlug = (title) =>
+  title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-") // replace non-alphanumeric with dash
+    .replace(/^-+|-+$/g, "");
+
+  // --- Persist sidebar menu selection ---
   useEffect(() => localStorage.setItem("adminMenuOpen", menuOpen), [menuOpen]);
 
+  // --- Fetch data depending on menu ---
   useEffect(() => {
     if (!token) {
       navigate("/login");
@@ -82,6 +94,7 @@ export default function Admin() {
     fetchData();
   }, [menuOpen, token]);
 
+  // --- API helper with error handling ---
   const apiCall = async (method, url, payload, errorKey) => {
     try {
       const response = await API[method](url, payload, {
@@ -98,6 +111,7 @@ export default function Admin() {
     }
   };
 
+  // --- Fetch articles ---
   const fetchArticles = async () => {
     setIsLoading((p) => ({ ...p, articles: true }));
     try {
@@ -110,6 +124,7 @@ export default function Admin() {
     }
   };
 
+  // --- Fetch users ---
   const fetchUsers = async () => {
     setIsLoading((p) => ({ ...p, users: true }));
     try {
@@ -120,6 +135,7 @@ export default function Admin() {
     }
   };
 
+  // --- Fetch site settings ---
   const fetchSettings = async () => {
     setIsLoading((p) => ({ ...p, settings: true }));
     try {
@@ -132,40 +148,62 @@ export default function Admin() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    const payload = { ...form, author: form.author || "Text Africa Arcade" };
-    try {
-      if (editingArticle)
-        await apiCall(
-          "put",
-          `/articles/${editingArticle}`,
-          payload,
-          "articles"
-        );
-      else await apiCall("post", "/articles", payload, "articles");
-      await fetchArticles();
-      setForm({
-        title: "",
-        content: "",
-        author: "",
-        category: "General",
-        featured: false,
-        image: "",
-      });
-      setEditingArticle(null);
-    } finally {
-      setIsSubmitting(false);
-    }
+  // --- Handle article submit ---
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+
+  // Generate link automatically if empty or update when editing
+  const articleLink =
+    form.link || `${window.location.origin}/articles/${generateSlug(form.title)}`;
+
+  const payload = { 
+    ...form, 
+    author: form.author || "Text Africa Arcade", 
+    link: articleLink 
   };
 
+  try {
+    let response;
+    if (editingArticle) {
+      response = await apiCall(
+        "put",
+        `/articles/${editingArticle}`,
+        payload,
+        "articles"
+      );
+    } else {
+      response = await apiCall("post", "/articles", payload, "articles");
+    }
+
+    // Refresh articles list
+    await fetchArticles();
+
+    // Reset form
+    setForm({
+      title: "",
+      content: "",
+      author: "",
+      category: "General",
+      featured: false,
+      image: "",
+      link: "",
+    });
+    setEditingArticle(null);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+;
+
+  // --- Delete article ---
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this article permanently?")) return;
     await apiCall("delete", `/articles/${id}`, null, "articles");
     await fetchArticles();
   };
 
+  // --- Calculate stats ---
   const calculateStats = (data) => {
     const total = data.length;
     const featured = data.filter((a) => a.featured).length;
@@ -175,29 +213,36 @@ export default function Admin() {
       acc[c] = (acc[c] || 0) + 1;
       return acc;
     }, {});
-    setStats({ total, featured, categories, views });
+    setStats({ total, featured, categories, views, totalViews: views });
   };
 
+  // --- Logout ---
   const handleLogout = () => {
     localStorage.clear();
     navigate("/");
   };
 
-  const handleEdit = (article) => {
-    setForm({
-      title: article.title,
-      content: article.content,
-      author: article.author,
-      category: article.category,
-      featured: article.featured,
-      image: article.image,
-    });
-    setEditingArticle(article._id);
-    setMenuOpen("articles");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // --- Edit article ---
+const handleEdit = (article) => {
+  const defaultLink =
+    article.link || `${window.location.origin}/articles/${generateSlug(article.title)}`;
 
-  // --- Image upload + compression + preview ---
+  setForm({
+    title: article.title,
+    content: article.content,
+    author: article.author,
+    category: article.category,
+    featured: article.featured,
+    image: article.image,
+    link: defaultLink, // automatically fill link
+  });
+  setEditingArticle(article._id);
+  setMenuOpen("articles");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+
+  // --- Image upload with compression ---
   const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -218,6 +263,7 @@ export default function Admin() {
     }
   };
 
+  // --- Socket for real-time views ---
   const socket = io(import.meta.env.VITE_API_URL);
 
   useEffect(() => {
@@ -226,7 +272,6 @@ export default function Admin() {
     );
     socket.on("disconnect", () => console.log("🔴 Socket disconnected"));
 
-    // Listen for real-time view updates
     socket.on("viewsUpdated", (data) => {
       console.log("📊 Real-time view update:", data);
       setStats((prev) => ({
@@ -263,7 +308,7 @@ export default function Admin() {
         </svg>
       </button>
 
-      {/* --- Sidebar (colors inverted: white <-> green) --- */}
+      {/* --- Sidebar --- */}
       <aside
         className={`fixed inset-y-0 left-0 w-72 md:w-64 bg-white text-[#2E7D32] border-r border-[#2E7D32]/30 z-40 flex flex-col transform transition-transform duration-300 md:static ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -290,7 +335,6 @@ export default function Admin() {
                 }`}
                 aria-current={menuOpen === key}
               >
-                {/* Icon (color follows text via currentColor) */}
                 <svg
                   className="w-5 h-5"
                   viewBox="0 0 24 24"
@@ -327,7 +371,7 @@ export default function Admin() {
         </div>
       </aside>
 
-      {/* --- Main --- */}
+      {/* --- Main Content --- */}
       <main className="flex-1 p-6 md:p-10 overflow-y-auto">
         <motion.h2
           initial={{ opacity: 0, y: -10 }}
@@ -337,7 +381,7 @@ export default function Admin() {
           {menuOpen.charAt(0).toUpperCase() + menuOpen.slice(1)}
         </motion.h2>
 
-        {/* --- Dashboard --- */}
+        {/* --- Dashboard Section --- */}
         {menuOpen === "dashboard" && (
           <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
             {[
@@ -347,7 +391,7 @@ export default function Admin() {
                 label: "Categories",
                 value: Object.keys(stats.categories).length,
               },
-              { label: "Total Views", value: stats.views },
+              { label: "Total Views", value: stats.totalViews },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
@@ -366,9 +410,10 @@ export default function Admin() {
           </section>
         )}
 
-        {/* --- Articles (with image upload + preview restored) --- */}
+        {/* --- Articles Section --- */}
         {menuOpen === "articles" && (
           <section>
+            {/* --- Add/Edit Article Form --- */}
             <form
               onSubmit={handleSubmit}
               className="bg-white border border-[#2E7D32]/30 rounded-2xl shadow-md p-6 mb-8"
@@ -409,7 +454,16 @@ export default function Admin() {
                 required
               ></textarea>
 
-              {/* Image upload + preview */}
+              {/* --- Article Link Input --- */}
+              <input
+                type="url"
+                placeholder="Article Link"
+                className="border border-[#2E7D32]/30 rounded-lg p-2 focus:ring-2 focus:ring-[#81C784] outline-none w-full mt-4"
+                value={form.link}
+                onChange={(e) => setForm({ ...form, link: e.target.value })}
+              />
+
+              {/* --- Image Upload and Preview --- */}
               <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#2E7D32]/30 bg-[#E8F5E9] text-[#2E7D32]">
@@ -456,6 +510,7 @@ export default function Admin() {
                   )}
                 </div>
 
+                {/* --- Featured Checkbox --- */}
                 <label className="flex items-center gap-2 text-[#2E7D32]">
                   <input
                     type="checkbox"
@@ -467,6 +522,7 @@ export default function Admin() {
                   Featured
                 </label>
 
+                {/* --- Form Buttons --- */}
                 <div className="flex gap-2">
                   {editingArticle && (
                     <button
@@ -480,6 +536,7 @@ export default function Admin() {
                           category: "General",
                           featured: false,
                           image: "",
+                          link: "",
                         });
                       }}
                       className="bg-white hover:bg-[#E8F5E9] border border-[#2E7D32]/30 px-4 py-2 rounded-lg"
@@ -502,6 +559,7 @@ export default function Admin() {
               </div>
             </form>
 
+            {/* --- Articles List --- */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {articles.map((article, i) => (
                 <motion.div
@@ -533,6 +591,17 @@ export default function Admin() {
                     <p className="text-sm mt-2 line-clamp-3 text-[#2E7D32]/80">
                       {article.content}
                     </p>
+
+                    {article.link && (
+                      <a
+                        href={article.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-block text-sm text-[#77BFA1] hover:text-[#2E7D32]/80 font-semibold"
+                      >
+                        View Full Article
+                      </a>
+                    )}
                   </div>
                   <div className="flex justify-between items-center mt-4">
                     <button
@@ -554,7 +623,7 @@ export default function Admin() {
           </section>
         )}
 
-        {/* --- Users --- */}
+        {/* --- Users Section --- */}
         {menuOpen === "users" && (
           <section className="bg-white border border-[#2E7D32]/30 rounded-2xl shadow-md p-6">
             <h3 className="text-xl font-semibold mb-4 text-[#2E7D32]">
@@ -599,7 +668,7 @@ export default function Admin() {
           </section>
         )}
 
-        {/* --- Settings --- */}
+        {/* --- Settings Section --- */}
         {menuOpen === "settings" && (
           <section className="bg-white border border-[#2E7D32]/30 rounded-2xl shadow-md p-6">
             <h3 className="text-xl font-semibold mb-4 text-[#2E7D32]">
@@ -647,4 +716,3 @@ export default function Admin() {
     </div>
   );
 }
-
