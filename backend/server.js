@@ -1,3 +1,4 @@
+// server.js
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -18,7 +19,7 @@ const settingsRoutes = require("./routes/settingsRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ Allowed Origins
+// ✅ Allowed Frontend Origins (Local + Cloudflare + Netlify)
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
@@ -31,7 +32,8 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error("Not allowed by CORS"));
+      console.warn(`🚫 Blocked by CORS: ${origin}`);
+      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
@@ -54,6 +56,17 @@ app.use("/api/settings", settingsRoutes);
 // ✅ Health Check
 app.get("/api/debug", (req, res) => res.json({ message: "API is live ✅" }));
 
+// ✅ Serve Frontend Build (only if deployed on same server)
+if (process.env.NODE_ENV === "production") {
+  const __dirnameRoot = path.resolve();
+  app.use(express.static(path.join(__dirnameRoot, "client", "dist")));
+
+  // SPA fallback
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirnameRoot, "client", "dist", "index.html"));
+  });
+}
+
 // ✅ 404 Handler
 app.use((req, res) => {
   res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` });
@@ -73,21 +86,32 @@ if (!process.env.MONGO_URI) {
 }
 
 mongoose
-  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => {
     console.log("✅ Connected to MongoDB Atlas");
-    const server = http.createServer(app);
-    const io = new Server(server, { cors: { origin: allowedOrigins, credentials: true } });
 
-    // Attach socket to req
-    app.use((req, res, next) => { req.io = io; next(); });
+    const server = http.createServer(app);
+    const io = new Server(server, {
+      cors: { origin: allowedOrigins, credentials: true },
+    });
+
+    // Attach socket.io to requests
+    app.use((req, res, next) => {
+      req.io = io;
+      next();
+    });
 
     io.on("connection", (socket) => {
       console.log("🟢 New WebSocket connection:", socket.id);
       socket.on("disconnect", () => console.log("🔴 Disconnected:", socket.id));
     });
 
-    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    server.listen(PORT, () =>
+      console.log(`🚀 Server running on port ${PORT}`)
+    );
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err.message);
