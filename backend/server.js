@@ -58,12 +58,13 @@ app.get("/api/debug", (req, res) => res.json({ message: "API is live ✅" }));
 // ✅ Serve frontend in production
 if (process.env.NODE_ENV === "production") {
   const __dirnameRoot = path.resolve();
-  app.use(express.static(path.join(__dirnameRoot, "frontend", "dist")));
+  app.use(express.static(path.join(__dirnameRoot, "../frontend/dist")));
 
   app.get("*", (req, res) => {
-    res.sendFile(path.resolve(__dirnameRoot, "frontend", "dist", "index.html"));
+    res.sendFile(path.resolve(__dirnameRoot, "../frontend/dist", "index.html"));
   });
 }
+
 
 // ✅ 404 fallback for unmatched API routes
 app.use((req, res) => {
