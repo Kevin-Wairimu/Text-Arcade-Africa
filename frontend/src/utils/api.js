@@ -3,12 +3,13 @@ import axios from "axios";
 
 const isProduction = !["localhost", "127.0.0.1"].includes(window.location.hostname);
 
+// ✅ Use your real Render backend domain
 const BACKEND_URL = isProduction
-  ? "https://text-arcade-africa.onrender.com" // ✅ Your Render backend
-  : "http://localhost:5000"; // ✅ Local backend
+  ? "https://text-arcade-africa-0dj4.onrender.com" // <-- Your actual backend
+  : "http://localhost:5000";
 
 const API = axios.create({
-  baseURL: `${BACKEND_URL}/api`, // Ensure single /api
+  baseURL: `${BACKEND_URL}/api`,
   timeout: 30000,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
@@ -35,7 +36,7 @@ API.interceptors.response.use(
     const status = err.response?.status;
     if (status === 401) {
       localStorage.removeItem("token");
-      window.location.href = "/auth"; // Redirect to login if unauthorized
+      window.location.href = "/auth"; // redirect if token invalid
     }
     console.error(
       `❌ API error ${err.config?.method?.toUpperCase()} ${err.config?.url}`,
