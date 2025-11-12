@@ -1,17 +1,15 @@
 import React, { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAlert } from "../context/AlertContext";
+import { useAuth } from "../context/AuthContext"; // ✅ 1. Import useAuth
 import Logo from "./Logo";
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const navigate = useNavigate();
-  const { showAlert } = useAlert();
 
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
+  // ✅ 2. Get everything from the AuthContext, NOT localStorage
+  const { user, token, logout } = useAuth();
 
   const navLinks = [
     { name: "Home", to: "/" },
@@ -21,26 +19,23 @@ export default function Nav() {
     { name: "Contact", to: "/contact" },
   ];
 
+  // ✅ 3. Use the centralized logout function from the context
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    showAlert("Logged out successfully!", "logout");
-    setTimeout(() => navigate("/"), 1200);
+    logout();
   };
 
-  const dashboardPath =
-    role === "Admin" || role === "Employee" ? "/admin" : "/client";
+  // ✅ 4. Determine the dashboard path from the user object in the context
+  const dashboardPath = user?.role?.toLowerCase() === "admin" ? "/admin" : "/client";
 
   return (
     <header className="fixed w-full top-0 z-50 bg-white shadow-md">
-      {/* --- No changes needed in the header/desktop nav --- */}
       <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-3 group">
           <motion.div
             whileHover={{ scale: 1.1, rotate: 5 }}
             transition={{ type: "spring", stiffness: 300 }}
           >
-            <Logo size={44} mode="icon" />
+            <Logo className="h-11 w-11" mode="icon" />
           </motion.div>
           <div>
             <div className="font-extrabold text-xl text-[#1E6B2B] tracking-tight">
@@ -51,6 +46,8 @@ export default function Nav() {
             </div>
           </div>
         </Link>
+        
+        {/* --- DESKTOP NAV --- */}
         <nav className="hidden md:flex items-center gap-6 font-medium text-[#1E6B2B]">
           {navLinks.map((link) => (
             <NavLink
@@ -58,9 +55,7 @@ export default function Nav() {
               to={link.to}
               className={({ isActive }) =>
                 `transition-colors hover:text-[#1E6B2B]/70 ${
-                  isActive
-                    ? "font-bold border-b-2 border-[#1E6B2B] pb-1"
-                    : ""
+                  isActive ? "font-bold border-b-2 border-[#1E6B2B] pb-1" : ""
                 }`
               }
             >
@@ -111,7 +106,7 @@ export default function Nav() {
         </motion.button>
       </div>
 
-      {/* --- Changes are in the Mobile Menu section --- */}
+      {/* ✅ RESTORED: The mobile menu JSX is now back in place. */}
       <AnimatePresence>
         {menuOpen && (
           <>
@@ -145,7 +140,6 @@ export default function Nav() {
                     key={`mobile-${link.name}`}
                     to={link.to}
                     onClick={() => setMenuOpen(false)}
-                    // ✅ FIX: Changed active class from "text-white" to a visible color.
                     className={({ isActive }) =>
                       isActive
                         ? "font-bold text-[#1E6B2B] underline"
@@ -164,7 +158,6 @@ export default function Nav() {
                     <NavLink
                       to={dashboardPath}
                       onClick={() => setMenuOpen(false)}
-                      // ✅ FIX: Applied the same active/inactive styling for consistency and readability.
                       className={({ isActive }) =>
                         `text-xl font-medium transition-colors ${
                           isActive

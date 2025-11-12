@@ -1,16 +1,28 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 import API from "../utils/api";
+import toast, { Toaster } from "react-hot-toast";
+import { FiShare2, FiSearch, FiChevronDown, FiChevronUp } from "react-icons/fi";
 
 export default function ClientDashboard() {
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+  const [showFeatured, setShowFeatured] = useState(false);
 
-  const name = localStorage.getItem("userName") || "Valued Client";
+  const name = user?.name || "Valued Client";
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
+  }, []);
 
   const categories = [
     "All",
@@ -21,247 +33,278 @@ export default function ClientDashboard() {
     "Events",
     "Digest",
     "Innovation",
-    // "Expert View",
     "Trends",
     "General",
   ];
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-    const role = localStorage.getItem("role");
-    if (role === "Admin" || role === "Employee") {
-      navigate("/admin");
-    } else {
-      fetchArticles();
-    }
-  }, [navigate]);
+    fetchArticles();
+    const interval = setInterval(fetchArticles, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   async function fetchArticles() {
     try {
       setLoading(true);
       setError(null);
       const { data } = await API.get("/articles");
-      const validArticles = (Array.isArray(data.articles) ? data.articles : []).filter(
-        (a) => a && a._id && a.title
-      );
-      setArticles(validArticles);
+      const valid = (data.articles || []).filter((a) => a && a._id && a.title);
+      setArticles(valid);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Failed to load articles.");
+      setError(err.response?.data?.message || "Failed to load articles.");
     } finally {
       setLoading(false);
     }
   }
 
-  const filteredArticles =
-    selectedCategory === "All"
-      ? articles
-      : articles.filter(
-          (a) =>
-            a.category?.toLowerCase() === selectedCategory.toLowerCase()
-        );
+  const featuredArticles = useMemo(
+    () => articles.filter((a) => a.featured === true),
+    [articles]
+  );
 
-  const featuredArticles = filteredArticles.slice(0, 3);
-  const recentArticles = filteredArticles.slice(3, 9);
+  const filtered = useMemo(() => {
+    let list =
+      selectedCategory === "All"
+        ? articles
+        : articles.filter(
+            (a) =>
+              a.category?.toLowerCase() === selectedCategory.toLowerCase()
+          );
+    if (searchTerm) {
+      list = list.filter((a) =>
+        a.title.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    if (sortBy === "oldest") {
+      list = list.sort((a, b) => new Date(a.date) - new Date(b.date));
+    } else {
+      list = list.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+    return list;
+  }, [articles, selectedCategory, searchTerm, sortBy]);
 
-  // --- Loading / Error States ---
-  if (loading || error) {
+  // ✅ show all articles in main list (including featured)
+  const recentArticles = useMemo(() => filtered.slice(0, 9), [filtered]);
+
+  if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-[#2E7D32] via-[#1B5E20] to-[#2E7D32] flex items-center justify-center px-4">
-        <div className="text-center">
-          {loading ? (
-            <>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-16 h-16 border-4 border-white/30 border-t-[#E8F5E9] rounded-full mx-auto mb-4"
-              />
-              <p className="text-white text-xl font-medium">
-                Loading your dashboard...
-              </p>
-            </>
-          ) : (
-            <div className="max-w-md bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 shadow-lg">
-              <h2 className="text-2xl font-bold text-white mb-4">
-                Oops! Something went wrong
-              </h2>
-              <p className="text-gray-200 mb-6">{error}</p>
-              <div className="flex gap-4 justify-center">
-                <button
-                  onClick={() => window.location.reload()}
-                  className="bg-[#81C784] text-[#1B5E20] px-6 py-3 rounded-lg font-semibold hover:bg-[#A5D6A7] transition shadow-md"
-                >
-                  Retry
-                </button>
-                <Link
-                  to="/login"
-                  className="border border-white/30 text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition"
-                >
-                  Log In Again
-                </Link>
-              </div>
-            </div>
-          )}
+      <div className="min-h-screen flex items-center justify-center bg-[#E8F5E9]">
+        <div className="space-y-3 w-full max-w-2xl p-6">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-6 bg-gray-300 animate-pulse rounded"></div>
+          ))}
         </div>
-      </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#E8F5E9] text-center">
+        <h2 className="text-2xl text-red-600 mb-3 font-semibold">Error Loading Articles</h2>
+        <p className="text-gray-700 mb-6">{error}</p>
+        <button
+          onClick={fetchArticles}
+          className="bg-[#2E7D32] text-white px-6 py-2 rounded hover:bg-[#1B5E20]"
+        >
+          Retry
+        </button>
+      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#E8F5E9] via-white to-[#E8F5E9] pt-24 md:pt-32 text-[#2E7D32]">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header Section */}
+    <div className="min-h-screen bg-gradient-to-b from-[#E8F5E9] via-white to-[#E8F5E9] text-gray-900">
+      <Toaster position="bottom-right" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 pt-24 md:pt-32">
+
+        {/* Header */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="text-4xl md:text-5xl font-extrabold text-[#2E7D32] mb-4 drop-shadow-sm">
-            Welcome back, {name}! 👋
+          <h1 className="text-4xl md:text-5xl font-extrabold text-[#2E7D32] mb-4">
+            {greeting}, {name}! 👋
           </h1>
           <p className="text-lg text-[#33691E]/80 max-w-3xl mx-auto">
-            Stay informed with insights from across Africa. Explore updates on
-            digital storytelling, innovation, and transformation.
+            Stay informed with insights from across Africa — explore digital storytelling, innovation, and transformation.
           </p>
         </motion.section>
 
-        {/* Category Filter */}
-        <section className="mb-10">
-          <div className="flex flex-wrap gap-2 justify-center">
+        {/* Toolbar */}
+        <div className="flex flex-wrap justify-between items-center mb-10 gap-4">
+          <div className="flex flex-wrap gap-2">
             {categories.map((cat) => (
-              <motion.button
+              <button
                 key={cat}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                className={`px-4 py-1 rounded-full border text-sm transition ${
                   selectedCategory === cat
-                    ? "bg-[#2E7D32] text-white shadow-md"
-                    : "bg-[#E8F5E9] text-[#2E7D32] hover:bg-[#C8E6C9]"
+                    ? "bg-[#2E7D32] text-white"
+                    : "border-[#2E7D32]/40 text-[#2E7D32] hover:bg-[#2E7D32]/10"
                 }`}
               >
                 {cat}
-              </motion.button>
+              </button>
             ))}
           </div>
-        </section>
 
-        {/* Featured Articles */}
-        {featuredArticles.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-12"
-          >
-            <h2 className="text-3xl font-bold text-[#1B5E20] mb-6">
-              Featured Stories
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              {featuredArticles.map((article) => (
-                <motion.article
-                  key={article._id}
-                  whileHover={{ y: -5 }}
-                  className="bg-white rounded-2xl overflow-hidden border border-[#A5D6A7] hover:border-[#2E7D32] transition-all shadow-lg"
-                >
-                  {article.image && (
-                    <img
-                      src={article.image}
-                      alt={article.title}
-                      className="w-full h-48 object-cover"
-                    />
-                  )}
-                  <div className="p-6">
-                    <span className="inline-block bg-[#E8F5E9] text-[#2E7D32] text-xs px-2 py-1 rounded-full mb-3 font-medium">
-                      {article.category || "General"}
-                    </span>
-                    <h3 className="text-lg font-semibold text-[#1B5E20] mb-2 line-clamp-2">
-                      {article.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                      {article.content?.substring(0, 120)}...
-                    </p>
-                    <Link
-                      to={`/article/${article._id}`}
-                      className="font-semibold text-[#2E7D32] hover:underline"
-                    >
-                      Read More →
-                    </Link>
-                  </div>
-                </motion.article>
-              ))}
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-2.5 text-[#2E7D32]/60" />
+              <input
+                type="text"
+                placeholder="Search..."
+                className="pl-10 pr-3 py-2 border rounded-full focus:outline-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          </motion.section>
-        )}
-
-        {/* Recent Articles */}
-        {recentArticles.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <h2 className="text-3xl font-bold text-[#1B5E20] mb-6">
-              Recent Updates
-            </h2>
-            <div className="space-y-4">
-              {recentArticles.map((article) => (
-                <motion.div
-                  key={article._id}
-                  whileHover={{ x: 5 }}
-                  className="flex gap-4 p-4 bg-white rounded-2xl border border-[#A5D6A7] hover:border-[#2E7D32] transition-all"
-                >
-                  {article.image && (
-                    <img
-                      src={article.image}
-                      alt={article.title}
-                      className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <span className="bg-[#E8F5E9] text-[#2E7D32] text-xs px-2 py-1 rounded-full font-medium mb-2 inline-block">
-                      {article.category || "General"}
-                    </span>
-                    <h3 className="text-base font-semibold text-[#1B5E20] mb-1 line-clamp-1">
-                      {article.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm line-clamp-2 mb-2">
-                      {article.content?.substring(0, 100)}...
-                    </p>
-                    <Link
-                      to={`/article/${article._id}`}
-                      className="text-[#2E7D32] text-sm font-semibold hover:underline"
-                    >
-                      Read full story →
-                    </Link>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* Empty State */}
-        {filteredArticles.length === 0 && (
-          <motion.section
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-20"
-          >
-            <h2 className="text-2xl font-bold text-[#1B5E20] mb-4">
-              No articles found in this category
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Try selecting another category or check back later for new content.
-            </p>
-            <Link
-              to="/services"
-              className="bg-[#2E7D32] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#81C784] transition shadow-md"
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="border rounded-full px-3 py-2"
             >
-              Explore Our Services
-            </Link>
-          </motion.section>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Toggle Featured */}
+        {featuredArticles.length > 0 && (
+          <div className="text-center mb-10">
+            <button
+              onClick={() => setShowFeatured((prev) => !prev)}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#2E7D32] text-white hover:bg-[#1B5E20] transition"
+            >
+              {showFeatured ? (
+                <>
+                  Hide Featured Articles <FiChevronUp />
+                </>
+              ) : (
+                <>
+                  Show Featured Articles <FiChevronDown />
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Featured Section (collapsible) */}
+        <AnimatePresence>
+          {showFeatured && featuredArticles.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <Section title="Featured Articles" articles={featuredArticles} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* All Articles (including featured) */}
+        <Section title="All Articles" articles={recentArticles} />
+
+        {filtered.length === 0 && (
+          <div className="text-center text-[#33691E]/70 mt-20">
+            <p className="text-xl mb-3">No articles match your filters.</p>
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedCategory("All");
+              }}
+              className="text-[#2E7D32] font-semibold underline hover:text-[#1B5E20]"
+            >
+              Reset Filters
+            </button>
+          </div>
         )}
       </main>
     </div>
+  );
+}
+
+/* ---------- Subcomponents ---------- */
+
+function Section({ title, articles }) {
+  if (articles.length === 0) return null;
+  return (
+    <section className="mb-14">
+      <h2 className="text-2xl md:text-3xl font-bold text-[#1B5E20] mb-6">{title}</h2>
+      <motion.div
+        layout
+        className="grid gap-6 md:grid-cols-3 sm:grid-cols-2 grid-cols-1"
+      >
+        <AnimatePresence>
+          {articles.map((a) => (
+            <ArticleCard key={a._id} article={a} />
+          ))}
+        </AnimatePresence>
+      </motion.div>
+    </section>
+  );
+}
+
+function ArticleCard({ article }) {
+  const share = async () => {
+    const shareData = {
+      title: article.title,
+      text: "Check out this article!",
+      url: window.location.origin + `/articles/${article._id}`,
+    };
+    try {
+      await navigator.share(shareData);
+    } catch {
+      navigator.clipboard.writeText(shareData.url);
+      toast.success("Link copied to clipboard!");
+    }
+  };
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      whileHover={{ scale: 1.02 }}
+      transition={{ duration: 0.3 }}
+      className="bg-white rounded-xl shadow hover:shadow-lg overflow-hidden transition"
+    >
+      <Link to={`/articles/${article._id}`}>
+        <div className="h-48 bg-[#E8F5E9]">
+          {article.image ? (
+            <img src={article.image} alt={article.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="flex items-center justify-center h-full text-[#2E7D32]/60">
+              No image
+            </div>
+          )}
+        </div>
+      </Link>
+      <div className="p-5">
+        <h3 className="text-lg font-semibold text-[#1B5E20] mb-2">{article.title}</h3>
+        <p className="text-[#33691E]/80 text-sm line-clamp-3 mb-3">
+          {article.excerpt || "Read more to explore the full story."}
+        </p>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-[#2E7D32] font-medium">
+            {article.category || "General"}
+          </span>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              share();
+            }}
+            className="text-[#2E7D32]/70 hover:text-[#1B5E20]"
+          >
+            <FiShare2 />
+          </button>
+        </div>
+      </div>
+    </motion.div>
   );
 }

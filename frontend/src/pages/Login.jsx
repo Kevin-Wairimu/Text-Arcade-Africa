@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import API from "../utils/api";
 import { useAlert } from "../context/AlertContext";
+// ✅ 1. Ensure this import is correct
+import { useAuth } from "../context/AuthContext";
 
 // --- SVG Icon for the "Back to Home" button ---
 const HomeIcon = () => (
@@ -25,6 +27,10 @@ const HomeIcon = () => (
 export default function Login() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
+  
+  // ✅ 2. Ensure this hook is called correctly
+  const { login } = useAuth();
+
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -32,39 +38,28 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  try {
-    // CALL CORRECT ENDPOINT
-    const { data } = await API.post("/auth/login", form);
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { data } = await API.post("/auth/login", form);
 
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("userName", data.user.name);
-    localStorage.setItem("userEmail", data.user.email);
-    localStorage.setItem("role", data.user.role);
-
-    showAlert("Welcome back!", "success");
-
-    setTimeout(() => {
-      if (data.user.role === "Client") {
-        navigate("/client");
-      } else if (data.user.role === "Admin") {
-        navigate("/admin");
+      if (data.token && data.user) {
+        showAlert(`Welcome back, ${data.user.name}!`, "success");
+        // ✅ 3. Ensure the central login function is called with the correct data
+        login(data.user, data.token);
       } else {
-        navigate("/");
+        throw new Error("Invalid response from server.");
       }
-    }, 400);
-  } catch (err) {
-    const msg = err.response?.data?.message || "Login failed";
-    console.error("Login error:", err.response?.data);
-    showAlert(msg, "error");
-    setLoading(false);
-  }
-};
+
+    } catch (err) {
+      const msg = err.response?.data?.message || "Login failed. Please check your credentials.";
+      showAlert(msg, "error");
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-emerald-50 to-white p-4">
-      {/* --- "Back to Home" Button --- */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -79,14 +74,12 @@ export default function Login() {
         </Link>
       </motion.div>
 
-      {/* --- Login Card --- */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="relative bg-white/40 backdrop-blur-2xl p-8 sm:p-10 rounded-2xl shadow-lg w-full max-w-md border border-white/40 overflow-hidden"
       >
-        {/* Glass glow overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-taa-primary/10 via-taa-accent/10 to-transparent rounded-2xl pointer-events-none" />
 
         <h1 className="text-3xl font-bold text-center text-taa-dark mb-2 relative z-10">
@@ -116,7 +109,6 @@ export default function Login() {
             required
             className="w-full p-3 rounded-lg bg-emerald-50/30 text-taa-dark placeholder-taa-dark/50 border border-white/20 backdrop-blur-sm focus:bg-white/40 focus:ring-2 focus:ring-taa-accent focus:outline-none transition"
           />
-
           <button
             type="submit"
             disabled={loading}

@@ -1,5 +1,3 @@
-// src/pages/ArticleDetails.jsx
-
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import API from "../utils/api";
@@ -87,14 +85,14 @@ export default function ArticleDetails() {
     }
   }, [getArticleLink, article, handleCopy]);
 
-  // --- 🆕 Download PDF Function ---
+  // --- PDF Download Function (Header only on first page) ---
   const handleDownloadPDF = async () => {
     if (!articleRef.current) return;
 
     try {
       const element = articleRef.current;
 
-      // Add a white background for better contrast in PDF
+      // Capture entire article content as canvas
       const canvas = await html2canvas(element, {
         scale: 2,
         backgroundColor: "#ffffff",
@@ -103,12 +101,45 @@ export default function ArticleDetails() {
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
-
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      // Add image and scale it to fit the page
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      const imgProps = {
+        width: canvas.width,
+        height: canvas.height,
+      };
+      const pdfImgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      let remainingHeight = pdfImgHeight;
+      let position = 0;
+      let pageNum = 1;
+
+      // Add first page with header
+      pdf.setFontSize(14);
+      pdf.setTextColor("#1b5e20");
+      pdf.text(article.title, 10, 10, { maxWidth: pdfWidth - 20 });
+      pdf.setFontSize(11);
+      pdf.setTextColor("#555555");
+      pdf.text(`By ${article.author || "Text Africa Arcade"}`, 10, 16, { maxWidth: pdfWidth - 20 });
+
+      pdf.addImage(imgData, "PNG", 0, 20, pdfWidth, pdfImgHeight);
+      remainingHeight -= pdfHeight - 20;
+
+      // Add page numbers at bottom of first page
+      pdf.setFontSize(10);
+      pdf.setTextColor("#555555");
+      pdf.text(`Page ${pageNum}`, pdfWidth - 20, pdfHeight - 10);
+
+      // Additional pages without header
+      while (remainingHeight > 0) {
+        pdf.addPage();
+        pageNum++;
+        position = -((pdfHeight - 20) * (pageNum - 1));
+        pdf.addImage(imgData, "PNG", 0, 20 + position, pdfWidth, pdfImgHeight);
+        pdf.text(`Page ${pageNum}`, pdfWidth - 20, pdfHeight - 10);
+        remainingHeight -= pdfHeight - 20;
+      }
+
       pdf.save(`${article.title.replace(/\s+/g, "_")}.pdf`);
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -141,32 +172,18 @@ export default function ArticleDetails() {
         transition={{ duration: 0.5 }}
         className="max-w-3xl mx-auto bg-green-50/50 border border-green-200 shadow-xl rounded-2xl p-4 sm:p-6 md:p-8 w-[95%] sm:w-[90%]"
       >
-        {/* 🆕 Top Buttons */}
+        {/* Top Buttons */}
         <div className="flex flex-wrap justify-end gap-3 mb-4">
           <button
             onClick={handleDownloadPDF}
             aria-label="Download article as PDF"
             className="flex items-center gap-2 bg-[#2E7D32] text-white px-4 sm:px-5 py-2 rounded-lg font-semibold hover:bg-green-700 focus:ring-2 focus:ring-green-400 transition-colors"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-              />
-            </svg>
             Download PDF
           </button>
         </div>
 
-        {/* --- Article Section --- */}
+        {/* Article Section */}
         <div ref={articleRef} className="break-words">
           <h1 className="text-2xl sm:text-4xl font-bold mb-3 text-[#1b5e20] break-words">
             {article.title}

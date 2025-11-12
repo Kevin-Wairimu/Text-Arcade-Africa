@@ -4,6 +4,7 @@ const User = require("../models/User");
 const Article = require("../models/Article");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const sendEmail = require("../utils/sendEmail");
 
 // ───────────────────────────────────────────────────────────────
 // 1. REGISTER
@@ -75,7 +76,9 @@ exports.login = async (req, res) => {
 
     // BLOCK SUSPENDED USERS
     if (user.suspended) {
-      return res.status(403).json({ message: "Account suspended. Contact admin." });
+      return res
+        .status(403)
+        .json({ message: "Account suspended. Contact admin." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -147,19 +150,23 @@ exports.updateArticle = async (req, res) => {
 // ───────────────────────────────────────────────────────────────
 // 4. FORGOT PASSWORD
 // ───────────────────────────────────────────────────────────────
+
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
+
   try {
+    // Find user by email
     const user = await User.findOne({ email });
+
+    // Always respond with a generic message to prevent account enumeration
     if (!user) {
-      return res
-        .status(200)
-        .json({
-          message:
-            "If an account with that email exists, a reset link has been sent.",
-        });
+      return res.status(200).json({
+        message:
+          "If an account with that email exists, a reset link has been sent.",
+      });
     }
 
+    // Generate a reset token
     const resetToken = crypto.randomBytes(20).toString("hex");
     const hashedToken = crypto
       .createHash("sha256")
@@ -167,67 +174,43 @@ exports.forgotPassword = async (req, res) => {
       .digest("hex");
     const expiryDate = Date.now() + 3600000; // 1 hour
 
-    const updatedUser = await User.findOneAndUpdate(
-      { _id: user._id },
-      {
-        $set: {
-          resetPasswordToken: hashedToken,
-          resetPasswordExpires: expiryDate,
-        },
-      },
-      { new: true }
-    );
+    // Save hashed token & expiry to user
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = expiryDate;
+    await user.save({ validateBeforeSave: false });
 
-    if (!updatedUser || updatedUser.resetPasswordToken !== hashedToken) {
-      console.log("SERVER CRITICAL ERROR: Database update failed silently.");
-      throw new Error("Failed to save reset token to the database.");
-    }
-    console.log("SERVER: HASHED token has been successfully saved to DB.");
+    // Create reset URL
+    const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-    const resetURL = `http://localhost:5173/reset-password/${resetToken}`;
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+    // Email HTML content
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+        <h2 style="color: #1E6B2B;">Password Reset Request</h2>
+        <p>You requested a password reset. Click the button below to reset your password. This link expires in 1 hour.</p>
+        <div style="text-align:center; margin:20px 0;">
+          <a href="${resetURL}" style="background:#1E6B2B;color:#fff;padding:12px 25px;text-decoration:none;border-radius:5px;">Reset Password</a>
+        </div>
+        <p>If you did not request this, ignore this email.</p>
+        <p style="font-size:0.8em;color:#666;">Or copy and paste this URL into your browser: ${resetURL}</p>
+      </div>
+    `;
+
+    // Send email via sendEmail utility (handles Gmail/TLS or API)
+    await sendEmail({
+      to: user.email,
+      subject: "Reset Your Password",
+      html: htmlContent,
     });
 
-    const mailOptions = {
-      from: `"Text Africa Arcade" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: "Your Password Reset Link",
-      html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.6; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
-          <h2 style="color: #1E6B2B; border-bottom: 2px solid #77BFA1; padding-bottom: 10px;">Password Reset Request</h2>
-          <p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>
-          <p>Please click on the button below to be redirected to the password reset page. This link is only valid for one hour.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetURL}" style="background-color: #1E6B2B; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px;">Reset Your Password</a>
-          </div>
-          <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 0.9em; color: #888;">
-            If you're having trouble clicking the button, copy and paste the URL below into your web browser:<br>
-            <a href="${resetURL}" style="color: #1E6B2B;">${resetURL}</a>
-          </p>
-        </div>`,
-    };
-
-    console.log("SERVER: Attempting to send email...");
-    await transporter.sendMail(mailOptions);
-    console.log("SERVER: Password reset email sent successfully.");
-
-    res
-      .status(200)
-      .json({ message: "A password reset link has been sent to your email." });
+    res.status(200).json({
+      message:
+        "If an account with that email exists, a reset link has been sent.",
+    });
   } catch (err) {
-    console.error("SERVER CRITICAL ERROR during forgot password:", err);
-    res.status(500).send("Server error");
+    console.error("SERVER ERROR during forgot password:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
-
 // ───────────────────────────────────────────────────────────────
 // 5. RESET PASSWORD
 // ───────────────────────────────────────────────────────────────
@@ -261,5 +244,33 @@ exports.resetPassword = async (req, res) => {
   } catch (err) {
     console.error("SERVER CRITICAL ERROR during password reset:", err);
     res.status(500).send("Server error");
+  }
+};
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token." });
+    }
+
+    user.password = await bcrypt.hash(req.body.password, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res
+      .status(200)
+      .json({ message: "Password has been updated successfully." });
+  } catch (err) {
+    console.error("SERVER ERROR during password reset:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
