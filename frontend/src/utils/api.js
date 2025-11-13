@@ -1,12 +1,13 @@
-// src/utils/api.js
 import axios from "axios";
 
 const isProduction = !["localhost", "127.0.0.1"].includes(window.location.hostname);
 
-// ✅ Use your real Render backend domain
-const BACKEND_URL = isProduction
-  ? "https://text-arcade-africa-0dj4.onrender.com" // <-- Your actual backend
-  : "http://localhost:5000";
+// ✅ Prefer environment variable (from Cloudflare)
+const BACKEND_URL =
+  import.meta.env.VITE_API_URL ||
+  (isProduction
+    ? "https://text-arcade-africa-0dj4.onrender.com" // your Render backend
+    : "http://localhost:5000");
 
 const API = axios.create({
   baseURL: `${BACKEND_URL}/api`,
@@ -28,20 +29,14 @@ API.interceptors.request.use(
 );
 
 API.interceptors.response.use(
-  (res) => {
-    console.log(`✅ Response ${res.config.method.toUpperCase()} ${res.config.url}`, res.data);
-    return res;
-  },
+  (res) => res,
   (err) => {
     const status = err.response?.status;
     if (status === 401) {
       localStorage.removeItem("token");
-      window.location.href = "/auth"; // redirect if token invalid
+      window.location.href = "/auth";
     }
-    console.error(
-      `❌ API error ${err.config?.method?.toUpperCase()} ${err.config?.url}`,
-      err.response?.data || err.message
-    );
+    console.error("❌ API error:", err.response?.data || err.message);
     return Promise.reject(err);
   }
 );
