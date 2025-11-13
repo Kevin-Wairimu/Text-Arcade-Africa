@@ -3,10 +3,9 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import API from "../utils/api";
 import { useAlert } from "../context/AlertContext";
-// ✅ 1. Ensure this import is correct
 import { useAuth } from "../context/AuthContext";
 
-// --- SVG Icon for the "Back to Home" button ---
+// --- SVG Icon ---
 const HomeIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -19,52 +18,56 @@ const HomeIcon = () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <polyline points="9 22 9 12 15 12 15 22" />
   </svg>
 );
 
 export default function Login() {
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-  
-  // ✅ 2. Ensure this hook is called correctly
-  const { login } = useAuth();
+  const { login, user } = useAuth();
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      const { data } = await API.post("/auth/login", form);
+      const response = await API.post("/auth/login", form);
+      const { token, user: loggedInUser } = response.data;
 
-      if (data.token && data.user) {
-        showAlert(`Welcome back, ${data.user.name}!`, "success");
-        // ✅ 3. Ensure the central login function is called with the correct data
-        login(data.user, data.token);
+      if (token && loggedInUser) {
+        login(loggedInUser, token); // ✅ only set state
+        showAlert(`Welcome back, ${loggedInUser.name}!`, "success");
+
+        // ✅ Redirect after login based on role
+        if (loggedInUser.role.toLowerCase() === "admin") navigate("/admin", { replace: true });
+        else navigate("/client", { replace: true });
       } else {
-        throw new Error("Invalid response from server.");
+        showAlert("Login failed. Server did not return token.", "error");
       }
-
     } catch (err) {
       const msg = err.response?.data?.message || "Login failed. Please check your credentials.";
       showAlert(msg, "error");
+    } finally {
       setLoading(false);
     }
   };
 
+  // Optional: redirect if already logged in
+  if (user) {
+    if (user.role.toLowerCase() === "admin") navigate("/admin", { replace: true });
+    else navigate("/client", { replace: true });
+  }
+
+
   return (
     <main className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-emerald-50 to-white p-4">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-      >
+      {/* Back to Home */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
         <Link
           to="/"
           className="absolute top-5 right-5 flex items-center gap-2 text-sm font-medium text-taa-primary bg-white/60 backdrop-blur-md py-2 px-4 rounded-full border border-white/30 hover:bg-white/90 transition"
@@ -74,6 +77,7 @@ export default function Login() {
         </Link>
       </motion.div>
 
+      {/* Login Card */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -89,10 +93,7 @@ export default function Login() {
           Login to continue your journey at Text Africa Arcade.
         </p>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-5 text-left relative z-10"
-        >
+        <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
           <input
             type="email"
             placeholder="Email address"
@@ -109,6 +110,7 @@ export default function Login() {
             required
             className="w-full p-3 rounded-lg bg-emerald-50/30 text-taa-dark placeholder-taa-dark/50 border border-white/20 backdrop-blur-sm focus:bg-white/40 focus:ring-2 focus:ring-taa-accent focus:outline-none transition"
           />
+
           <button
             type="submit"
             disabled={loading}

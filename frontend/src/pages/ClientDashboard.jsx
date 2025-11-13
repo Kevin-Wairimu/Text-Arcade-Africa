@@ -83,7 +83,6 @@ export default function ClientDashboard() {
     return list;
   }, [articles, selectedCategory, searchTerm, sortBy]);
 
-  // ✅ show all articles in main list (including featured)
   const recentArticles = useMemo(() => filtered.slice(0, 9), [filtered]);
 
   if (loading) {
@@ -172,7 +171,7 @@ export default function ClientDashboard() {
           </div>
         </div>
 
-        {/* Toggle Featured */}
+        {/* Featured toggle */}
         {featuredArticles.length > 0 && (
           <div className="text-center mb-10">
             <button
@@ -192,7 +191,7 @@ export default function ClientDashboard() {
           </div>
         )}
 
-        {/* Featured Section (collapsible) */}
+        {/* Featured Section */}
         <AnimatePresence>
           {showFeatured && featuredArticles.length > 0 && (
             <motion.div
@@ -206,7 +205,7 @@ export default function ClientDashboard() {
           )}
         </AnimatePresence>
 
-        {/* All Articles (including featured) */}
+        {/* All Articles */}
         <Section title="All Articles" articles={recentArticles} />
 
         {filtered.length === 0 && (
@@ -254,7 +253,7 @@ function ArticleCard({ article }) {
     const shareData = {
       title: article.title,
       text: "Check out this article!",
-      url: window.location.origin + `/articles/${article._id}`,
+      url: window.location.origin + `/articles/${article.slug || article._id}`,
     };
     try {
       await navigator.share(shareData);
@@ -263,6 +262,8 @@ function ArticleCard({ article }) {
       toast.success("Link copied to clipboard!");
     }
   };
+
+  const articleUrl = `/articles/${article.slug || article._id}`;
 
   return (
     <motion.div
@@ -274,7 +275,7 @@ function ArticleCard({ article }) {
       transition={{ duration: 0.3 }}
       className="bg-white rounded-xl shadow hover:shadow-lg overflow-hidden transition"
     >
-      <Link to={`/articles/${article._id}`}>
+      <Link to={articleUrl}>
         <div className="h-48 bg-[#E8F5E9]">
           {article.image ? (
             <img src={article.image} alt={article.title} className="w-full h-full object-cover" />
@@ -294,15 +295,20 @@ function ArticleCard({ article }) {
           <span className="text-sm text-[#2E7D32] font-medium">
             {article.category || "General"}
           </span>
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              share();
-            }}
-            className="text-[#2E7D32]/70 hover:text-[#1B5E20]"
-          >
-            <FiShare2 />
-          </button>
+          <div className="flex gap-2 items-center">
+            <Link
+              to={articleUrl}
+              className="text-[#2E7D32] font-semibold hover:text-[#1B5E20] text-sm"
+            >
+              Read More
+            </Link>
+            <button
+              onClick={share}
+              className="text-[#2E7D32]/70 hover:text-[#1B5E20]"
+            >
+              <FiShare2 />
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

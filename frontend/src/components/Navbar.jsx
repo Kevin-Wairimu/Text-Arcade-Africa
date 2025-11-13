@@ -2,13 +2,11 @@ import React, { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "../context/AuthContext"; // ✅ 1. Import useAuth
+import { useAuth } from "../context/AuthContext";
 import Logo from "./Logo";
 
 export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // ✅ 2. Get everything from the AuthContext, NOT localStorage
   const { user, token, logout } = useAuth();
 
   const navLinks = [
@@ -19,50 +17,54 @@ export default function Nav() {
     { name: "Contact", to: "/contact" },
   ];
 
-  // ✅ 3. Use the centralized logout function from the context
   const handleLogout = () => {
     logout();
   };
 
-  // ✅ 4. Determine the dashboard path from the user object in the context
-  const dashboardPath = user?.role?.toLowerCase() === "admin" ? "/admin" : "/client";
+  const dashboardPath =
+    user?.role?.toLowerCase() === "admin" ? "/admin" : "/client";
 
   return (
     <header className="fixed w-full top-0 z-50 bg-white shadow-md">
-      <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        {/* --- Logo --- */}
         <Link to="/" className="flex items-center gap-3 group">
           <motion.div
             whileHover={{ scale: 1.1, rotate: 5 }}
             transition={{ type: "spring", stiffness: 300 }}
           >
-            <Logo className="h-11 w-11" mode="icon" />
+            <Logo className="h-10 w-10 sm:h-11 sm:w-11" mode="icon" />
           </motion.div>
-          <div>
-            <div className="font-extrabold text-xl text-[#1E6B2B] tracking-tight">
+          <div className="hidden xs:block">
+            <div className="font-extrabold text-lg sm:text-xl text-[#1E6B2B] tracking-tight">
               Text Africa Arcade
             </div>
-            <div className="text-xs text-[#1E6B2B]/80 italic">
+            <div className="text-[10px] sm:text-xs text-[#1E6B2B]/80 italic">
               Digital transformation for text products
             </div>
           </div>
         </Link>
-        
+
         {/* --- DESKTOP NAV --- */}
-        <nav className="hidden md:flex items-center gap-6 font-medium text-[#1E6B2B]">
+        <nav className="hidden lg:flex items-center gap-6 font-medium text-[#1E6B2B]">
           {navLinks.map((link) => (
             <NavLink
               key={link.name}
               to={link.to}
               className={({ isActive }) =>
                 `transition-colors hover:text-[#1E6B2B]/70 ${
-                  isActive ? "font-bold border-b-2 border-[#1E6B2B] pb-1" : ""
+                  isActive
+                    ? "font-bold border-b-2 border-[#1E6B2B] pb-1"
+                    : ""
                 }`
               }
             >
               {link.name}
             </NavLink>
           ))}
-          <div className="flex items-center gap-2 pl-4">
+
+          {/* --- Auth Links --- */}
+          <div className="flex items-center gap-3 pl-4">
             {token ? (
               <>
                 <NavLink
@@ -96,17 +98,19 @@ export default function Nav() {
             )}
           </div>
         </nav>
+
+        {/* --- MOBILE MENU TOGGLE --- */}
         <motion.button
-          className="md:hidden text-[#1E6B2B] focus:outline-none z-50"
+          className="lg:hidden text-[#1E6B2B] focus:outline-none z-50"
           onClick={() => setMenuOpen(!menuOpen)}
           whileTap={{ scale: 0.9 }}
           aria-label="Toggle menu"
         >
-          {menuOpen ? <X size={32} /> : <Menu size={32} />}
+          {menuOpen ? <X size={30} /> : <Menu size={30} />}
         </motion.button>
       </div>
 
-      {/* ✅ RESTORED: The mobile menu JSX is now back in place. */}
+      {/* --- MOBILE MENU --- */}
       <AnimatePresence>
         {menuOpen && (
           <>
@@ -114,7 +118,7 @@ export default function Nav() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 z-40 md:hidden"
+              className="fixed inset-0 bg-black/40 z-40 lg:hidden"
               onClick={() => setMenuOpen(false)}
             />
             <motion.nav
@@ -122,9 +126,10 @@ export default function Nav() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
-              className="fixed top-0 right-0 h-full w-4/5 max-w-sm bg-white z-50 flex flex-col p-8 shadow-2xl text-[#1E6B2B]"
+              className="fixed top-0 right-0 h-full w-4/5 sm:w-2/3 max-w-sm bg-white z-50 flex flex-col p-8 shadow-2xl text-[#1E6B2B]"
             >
-              <div className="flex justify-end mb-6">
+              <div className="flex justify-between items-center mb-6">
+                <Logo className="h-10 w-10" mode="icon" />
                 <button
                   onClick={() => setMenuOpen(false)}
                   className="text-[#1E6B2B] focus:outline-none hover:text-[#1E6B2B]/70"
@@ -134,7 +139,7 @@ export default function Nav() {
               </div>
 
               {/* Nav Links */}
-              <div className="flex flex-col gap-6 text-xl font-medium">
+              <div className="flex flex-col gap-5 text-lg sm:text-xl font-medium">
                 {navLinks.map((link) => (
                   <NavLink
                     key={`mobile-${link.name}`}
@@ -159,7 +164,7 @@ export default function Nav() {
                       to={dashboardPath}
                       onClick={() => setMenuOpen(false)}
                       className={({ isActive }) =>
-                        `text-xl font-medium transition-colors ${
+                        `text-lg font-medium transition-colors ${
                           isActive
                             ? "font-bold text-[#1E6B2B] underline"
                             : "text-[#1E6B2B] hover:text-[#1E6B2B]/70"
@@ -197,7 +202,9 @@ export default function Nav() {
                   </>
                 )}
               </div>
-              <div className="mt-auto text-sm text-[#1E6B2B]/70">
+
+              {/* Footer */}
+              <div className="mt-auto text-sm text-[#1E6B2B]/70 text-center">
                 <p>© {new Date().getFullYear()} Text Africa Arcade</p>
               </div>
             </motion.nav>

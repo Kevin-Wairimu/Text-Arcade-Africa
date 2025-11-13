@@ -1,55 +1,43 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
-export const AuthContext = createContext(null);
+const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  // ✅ CHANGED: Initialize state from sessionStorage instead of localStorage
-  const [user, setUser] = useState(() => {
-    try {
-      const savedUser = sessionStorage.getItem("user");
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
-      return null;
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Initialize from localStorage on mount
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
+
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      setUser(JSON.parse(storedUser));
     }
-  });
+    setLoading(false);
+  }, []);
 
-  const [token, setToken] = useState(() => sessionStorage.getItem("token"));
-  const [loading, setLoading] = useState(false); // Can be false, as sessionStorage is synchronous
-  const navigate = useNavigate();
-
-  const login = useCallback((userData, userToken) => {
-    // ✅ CHANGED: Save to sessionStorage
-    sessionStorage.setItem("user", JSON.stringify(userData));
-    sessionStorage.setItem("token", userToken);
+  const login = (userData, jwt) => {
     setUser(userData);
-    setToken(userToken);
-    const targetPath = userData.role?.toLowerCase() === 'admin' ? '/admin' : '/client';
-    navigate(targetPath, { replace: true });
-  }, [navigate]);
+    setToken(jwt);
+    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", jwt);
+  };
 
-  const logout = useCallback(() => {
-    // ✅ CHANGED: Remove from sessionStorage
-    sessionStorage.removeItem("user");
-    sessionStorage.removeItem("token");
+  const logout = () => {
     setUser(null);
     setToken(null);
-    navigate('/login', { replace: true });
-  }, [navigate]);
-
-  // ✅ REMOVED: The 'storage' event listener useEffect is now gone.
-  // It only works with localStorage and is no longer needed because each tab
-  // now has its own isolated session.
-
-  const value = { user, token, login, logout, loading };
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+  };
 
   return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
+    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+      {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);

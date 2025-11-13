@@ -10,21 +10,21 @@ console.log("SERVER: Setting up article routes...");
 
 // --- PUBLIC ROUTES ---
 
-// Get all articles (with optional filters, pagination)
+// Get all articles (with optional filters, pagination) - no auth
 if (articleController.getAllArticles) {
-  router.get("/", authenticateToken, articleController.getAllArticles);
+  router.get("/", articleController.getAllArticles);
 } else {
   console.error("❌ getAllArticles is undefined in articleController!");
 }
 
-// Get article by slug (must come BEFORE dynamic /:id routes)
+// Get article by slug (must come BEFORE dynamic /:id routes) - no auth
 if (articleController.getArticleBySlug) {
-  router.get("/slug/:slug", authenticateToken, articleController.getArticleBySlug);
+  router.get("/slug/:slug", articleController.getArticleBySlug);
 } else {
   console.error("❌ getArticleBySlug is undefined in articleController!");
 }
 
-// PDF download route MUST come BEFORE /:id
+// PDF download route (protected)
 router.get("/:id/pdf", authenticateToken, async (req, res) => {
   try {
     const article = await Article.findById(req.params.id).lean();
@@ -84,9 +84,9 @@ router.get("/:id/pdf", authenticateToken, async (req, res) => {
   }
 });
 
-// Get article by ID (increments views)
+// Get article by ID (increments views) - optional: protect or public
 if (articleController.getArticleById) {
-  router.get("/:id", authenticateToken, articleController.getArticleById);
+  router.get("/:id", articleController.getArticleById);
 } else {
   console.error("❌ getArticleById is undefined in articleController!");
 }

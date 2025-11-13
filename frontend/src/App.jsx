@@ -1,7 +1,5 @@
 import React from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
-
-// 1. Import the AuthProvider that you created
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 
 import Nav from "./components/Navbar";
@@ -22,26 +20,25 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Alert from "./components/Alert";
 import ScrollToTop from "./components/ScrollToTop";
 
-// 2. Create an AppContent component
-// Its job is to handle all the logic that depends on routing (like useLocation)
 const AppContent = () => {
   const location = useLocation();
 
+  // Hide navbar/footer for auth pages
   const hideNavFooter = [
     "/login",
     "/register",
     "/forgot-password",
     "/reset-password",
-    "/admin",
   ].some((path) => location.pathname.startsWith(path));
 
   return (
     <div className="min-h-screen flex flex-col">
       <ScrollToTop />
       {!hideNavFooter && <Nav />}
+
       <div className="flex-1">
         <Routes>
-          {/* Public Pages */}
+          {/* --- Public Pages --- */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
@@ -50,31 +47,32 @@ const AppContent = () => {
           <Route path="/article/:id" element={<ArticleDetails />} />
           <Route path="/articles/:slug" element={<ArticleDetails />} />
 
-          {/* Auth Pages */}
+          {/* --- Auth Pages --- */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-          {/* Protected Routes */}
+          {/* --- Protected Routes --- */}
           <Route
-            path="/admin"
+            path="/admin/*" // ✅ Add /* for nested routes
             element={
-              <ProtectedRoute role="admin">
+              <ProtectedRoute allowedRole="admin">
                 <Admin />
               </ProtectedRoute>
             }
           />
+
           <Route
-            path="/client"
+            path="/client/*"
             element={
-              <ProtectedRoute role="client">
+              <ProtectedRoute allowedRole="client">
                 <ClientDashboard />
               </ProtectedRoute>
             }
           />
 
-          {/* Fallback */}
+          {/* --- Fallback 404 --- */}
           <Route
             path="*"
             element={
@@ -85,14 +83,14 @@ const AppContent = () => {
           />
         </Routes>
       </div>
+
       {!hideNavFooter && <Footer />}
       <Alert />
     </div>
   );
 };
 
-
-// 3. The main App component's ONLY job is to provide the context
+// Wrap the app in AuthProvider
 export default function App() {
   return (
     <AuthProvider>

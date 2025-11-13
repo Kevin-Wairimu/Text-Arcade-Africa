@@ -1,17 +1,10 @@
+// src/pages/Home.jsx
 import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
+import API from "../utils/api";
 import Hero from "../components/Hero";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "https://your-production-url.com";
-
-const API = axios.create({
-  baseURL: API_BASE_URL,
-  headers: { "Content-Type": "application/json" },
-});
-
-// Animation
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
   visible: (i = 1) => ({
@@ -20,24 +13,6 @@ const fadeIn = {
     transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" },
   }),
 };
-
-// Relative time formatter
-function formatRelativeTime(date) {
-  if (!date) return "Date unavailable";
-  const published = new Date(date);
-  const diffMs = Date.now() - published.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return "just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} min ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr} hr${diffHr > 1 ? "s" : ""} ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay} day${diffDay > 1 ? "s" : ""} ago`;
-  const diffWeek = Math.floor(diffDay / 7);
-  if (diffWeek < 4) return `${diffWeek} week${diffWeek > 1 ? "s" : ""} ago`;
-  return published.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
 
 // Skeleton loader
 const SkeletonCard = memo(() => (
@@ -78,7 +53,7 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
       </div>
       <div className="p-5 flex flex-col flex-grow">
         <div className="text-sm font-medium text-[#2E7D32]">
-          {article.category || "General"} • {formatRelativeTime(article.publishedAt)}
+          {article.category || "General"} • {new Date(article.publishedAt).toLocaleDateString()}
         </div>
         <h3 className="font-semibold text-lg mt-2 text-[#2E7D32] line-clamp-2">{article.title}</h3>
         <p className="mt-2 text-sm text-gray-700 line-clamp-3">
@@ -99,7 +74,6 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
 });
 ArticleCard.displayName = "ArticleCard";
 
-// Category mapping
 const CATEGORY_MAP = {
   All: "",
   "Media Review": "Media Review",
@@ -132,7 +106,7 @@ export default function Home() {
 
   const categories = useMemo(() => Object.keys(CATEGORY_MAP), []);
 
-  // --- Sync filters & pagination to URL ---
+  // Sync filters & pagination to URL
   useEffect(() => {
     const params = {};
     if (category !== "All") params.category = category;
@@ -141,7 +115,6 @@ export default function Home() {
     setSearchParams(params, { replace: true });
   }, [category, searchTerm, page]);
 
-  // --- Fetch articles ---
   const fetchArticles = useCallback(
     async (fresh = false) => {
       try {
@@ -161,7 +134,7 @@ export default function Home() {
         if (category !== "All") params.append("category", getApiCategory(category));
         if (searchTerm.trim()) params.append("search", searchTerm.trim());
 
-        const { data } = await API.get(`/api/articles?${params.toString()}`);
+        const { data } = await API.get(`/articles?${params.toString()}`);
         setArticles((prev) => (fresh ? data.articles : [...prev, ...data.articles]));
         setTotalArticles(data.total || 0);
       } catch (err) {
@@ -175,15 +148,13 @@ export default function Home() {
     [category, searchTerm, page]
   );
 
-  // Debounced fetch for search
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchArticles(true);
-    }, 400);
+    }, 300);
     return () => clearTimeout(timer);
   }, [category, searchTerm]);
 
-  // Load more
   useEffect(() => {
     if (page > 1) fetchArticles(false);
   }, [page]);
@@ -215,9 +186,8 @@ export default function Home() {
           Latest News & Insights
         </motion.h2>
 
-        {/* --- Filters --- */}
+        {/* Filters */}
         <div className="flex flex-col items-center gap-6 mt-8">
-          {/* Categories */}
           <div className="flex flex-wrap justify-center gap-2">
             {categories.map((label) => (
               <button
@@ -237,7 +207,6 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Search */}
           <div className="flex w-full max-w-lg items-center gap-2">
             <input
               type="text"
@@ -264,7 +233,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* --- Articles --- */}
+        {/* Articles */}
         <div className="mt-12">
           {isLoading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -295,7 +264,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* --- Load More --- */}
         <div className="text-center mt-12">
           {isLoadingMore && <p className="animate-pulse text-[#2E7D32]">Loading more...</p>}
           {hasMore && !isLoadingMore && (
