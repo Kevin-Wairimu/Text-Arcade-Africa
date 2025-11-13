@@ -1,55 +1,35 @@
-const express = require("express");
-const nodemailer = require("nodemailer");
-require("dotenv").config();
+const sendEmail = require("../utils/sendEmail");
 
-const router = express.Router();
+exports.submitContactForm = async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
 
-// POST /api/contact
-router.post("/", async (req, res) => {
-  const { name, email, message } = req.body;
-
-  console.log("📥 Contact form payload:", { name, email, message });
-
-  // Validate all fields
-  if (!name || !email || !message) {
-    console.log("❌ Missing required fields in contact form");
-    return res.status(400).json({ success: false, message: "All fields are required" });
-  }
-
-  // Respond immediately to avoid frontend timeout
-  res.json({ success: true, message: "Message received! We'll get back to you shortly." });
-
-  // Send email asynchronously
-  setImmediate(async () => {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: parseInt(process.env.SMTP_PORT) === 465,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-        tls: { rejectUnauthorized: false },
-      });
-
-      // Verify SMTP connection
-      const verification = await transporter.verify();
-      console.log("✅ SMTP connection verified:", verification);
-
-      const mailOptions = {
-        from: `"Text Arcade Africa" <${process.env.SMTP_USER}>`,
-        to: process.env.CONTACT_RECEIVER || process.env.SMTP_USER || "your-contact-email@example.com",
-        subject: `New Contact Message from ${name}`,
-        text: `Name: ${name}\nEmail: ${email}\nMessage:\n${message}`,
-      };
-
-      const info = await transporter.sendMail(mailOptions);
-      console.log("✅ Contact email sent:", { ...mailOptions, messageId: info.messageId });
-    } catch (err) {
-      console.error("❌ Contact email error:", err.message, err.stack);
+    // Validate inputs
+    if (!email || !message) {
+      return res.status(400).json({ message: "Email and message are required." });
     }
-  });
-});
 
-module.exports = router;
+    // Prepare the email
+    const subject = `New Contact Form Submission${name ? ` from ${name}` : ""}`;
+    const html = `
+      <h2>New Message from Text Africa Arcade</h2>
+      ${name ? `<p><strong>Name:</strong> ${name}</p>` : ""}
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Message:</strong></p>
+      <p>${message}</p>
+    `;
+
+    // Send via Brevo
+    await sendEmail({
+      to: process.env.BREVO_RECEIVER_EMAIL,
+      subject,
+      html,
+    });
+
+    console.log("📨 Contact email sent successfully!");
+    res.status(200).json({ message: "Your message was sent successfully!" });
+  } catch (error) {
+    console.error("❌ Contact form error:", error);
+    res.status(500).json({ message: "Failed to send message. Please try again later." });
+  }
+};

@@ -1,3 +1,4 @@
+// backend/config/connectDB.js
 import mongoose from "mongoose";
 
 const connectDB = async () => {
@@ -6,6 +7,7 @@ const connectDB = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
+
     console.log(`✅ MongoDB connected successfully`);
     console.log(`📦 Connected to DB: ${conn.connection.name}`);
     console.log(`📂 Collections: ${Object.keys(conn.connection.collections)}`);
