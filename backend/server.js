@@ -23,27 +23,26 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://text-arcade-africa.pages.dev", // main site
-  "https://text-arcade-africa-0dj4.onrender.com", // backend on Render
+  process.env.FRONTEND_URL,
+  /\.text-arcade-africa\.pages\.dev$/, // ✅ allow all Cloudflare preview URLs
+  "https://text-arcade-africa-0dj4.onrender.com",
 ];
 
-// ✅ Flexible CORS setup (supports wildcard for preview subdomains)
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        /\.text-arcade-africa\.pages\.dev$/.test(origin) // wildcard for preview domains
-      ) {
-        return callback(null, true);
-      }
+      if (!origin) return callback(null, true);
+      const allowed = allowedOrigins.some((allowed) =>
+        allowed instanceof RegExp ? allowed.test(origin) : allowed === origin
+      );
+      if (allowed) return callback(null, true);
       console.log("❌ Blocked by CORS:", origin);
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
 );
+
 
 // ✅ Middleware
 app.use(express.json({ limit: "10mb" }));
