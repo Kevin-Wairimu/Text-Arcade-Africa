@@ -19,19 +19,25 @@ const settingsRoutes = require("./routes/settingsRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ Allowed origins for CORS
+// ✅ Allowed origins for CORS (Production + Preview + Local)
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://text-arcade-africa.pages.dev",
-  "https://text-arcade-africa-0dj4.onrender.com",
+  "https://text-arcade-africa.pages.dev", // main site
+  "https://text-arcade-africa-0dj4.onrender.com", // backend on Render
 ];
 
-
+// ✅ Flexible CORS setup (supports wildcard for preview subdomains)
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        /\.text-arcade-africa\.pages\.dev$/.test(origin) // wildcard for preview domains
+      ) {
+        return callback(null, true);
+      }
       console.log("❌ Blocked by CORS:", origin);
       return callback(new Error("Not allowed by CORS"));
     },
@@ -39,7 +45,7 @@ app.use(
   })
 );
 
-
+// ✅ Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -55,7 +61,7 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/settings", settingsRoutes);
 
-// ✅ Simple debug endpoint
+// ✅ Debug route
 app.get("/api/debug", (req, res) => res.json({ message: "API is live ✅" }));
 
 // ✅ Serve frontend in production
@@ -68,8 +74,7 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-
-// ✅ 404 fallback for unmatched API routes
+// ✅ 404 fallback
 app.use((req, res) => {
   res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` });
 });
@@ -77,7 +82,10 @@ app.use((req, res) => {
 // ✅ Global error handler
 app.use((err, req, res, next) => {
   console.error("🔥 Server error:", err.message);
-  res.status(500).json({ error: "Internal Server Error", details: err.message });
+  res.status(500).json({
+    error: "Internal Server Error",
+    details: err.message,
+  });
 });
 
 // ✅ MongoDB connection
@@ -98,21 +106,38 @@ mongoose
 
     // ✅ Setup HTTP + WebSocket server
     const server = http.createServer(app);
+
     const io = new Server(server, {
-      cors: { origin: allowedOrigins, credentials: true },
+      cors: {
+        origin: (origin, callback) => {
+          if (
+            !origin ||
+            allowedOrigins.includes(origin) ||
+            /\.text-arcade-africa\.pages\.dev$/.test(origin)
+          ) {
+            return callback(null, true);
+          }
+          console.log("❌ Socket.IO Blocked by CORS:", origin);
+          return callback(new Error("Not allowed by CORS"));
+        },
+        methods: ["GET", "POST"],
+        credentials: true,
+      },
     });
 
+    // ✅ Make `io` available to routes
     app.use((req, res, next) => {
       req.io = io;
       next();
     });
 
+    // ✅ WebSocket handlers
     io.on("connection", (socket) => {
       console.log("🟢 New WebSocket connection:", socket.id);
       socket.on("disconnect", () => console.log("🔴 Disconnected:", socket.id));
     });
 
-    // ✅ Reset daily views once every 24h
+    // ✅ Reset daily views once every 24 hours
     const resetDailyViews = async () => {
       try {
         await Article.updateMany({}, { dailyViews: 0, dailyViewsDate: new Date() });
@@ -123,8 +148,10 @@ mongoose
       }
     };
 
+    // Run every 24 hours
     setInterval(resetDailyViews, 24 * 60 * 60 * 1000);
 
+    // ✅ Start server
     server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
   .catch((err) => {
