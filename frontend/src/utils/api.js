@@ -1,13 +1,10 @@
 import axios from "axios";
 
-const isProduction = !["localhost", "127.0.0.1"].includes(window.location.hostname);
-
-// ✅ Prefer environment variable (from Cloudflare)
 const BACKEND_URL =
-  import.meta.env.VITE_API_URL ||
-  (isProduction
-    ? "https://text-arcade-africa-0dj4.onrender.com" // your Render backend
-    : "http://localhost:5000");
+  import.meta.env.VITE_API_URL?.trim().replace(/\/$/, "") ||
+  (["localhost", "127.0.0.1"].includes(window.location.hostname)
+    ? "http://localhost:5000"
+    : "https://text-arcade-africa-0dj4.onrender.com");
 
 const API = axios.create({
   baseURL: `${BACKEND_URL}/api`,
@@ -17,6 +14,7 @@ const API = axios.create({
 });
 
 console.log(`🌍 API base URL: ${API.defaults.baseURL}`);
+
 
 API.interceptors.request.use(
   (config) => {
