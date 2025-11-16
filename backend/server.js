@@ -30,6 +30,7 @@ const allowedOrigins = [
 
 // ================================
 // ✅ CORS Middleware
+// Handles credentials & preflight
 // ================================
 app.use((req, res, next) => {
   const origin = req.headers.origin;

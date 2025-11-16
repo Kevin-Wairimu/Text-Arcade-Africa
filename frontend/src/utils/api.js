@@ -1,8 +1,8 @@
 // src/utils/api.js
 import axios from "axios";
 
+// Determine backend URL
 const isProduction = !["localhost", "127.0.0.1"].includes(window.location.hostname);
-
 const BACKEND_URL = isProduction
   ? "https://text-arcade-africa.onrender.com"
   : "http://localhost:5000";
@@ -15,7 +15,20 @@ const API = axios.create({
 });
 
 // =============================================
-// 🔥 1. BACKGROUND WAKE-UP PING (non-blocking)
+// 🔥 FRONTEND RETRY LOADING STATE
+// =============================================
+let loadingRetryCallback = null; // will be set by frontend
+
+export const onRetryLoadingChange = (callback) => {
+  loadingRetryCallback = callback;
+};
+
+function setRetryLoading(state) {
+  if (loadingRetryCallback) loadingRetryCallback(state);
+}
+
+// =============================================
+// 🔥 BACKGROUND WAKE-UP
 // =============================================
 async function warmUpServer() {
   try {
@@ -26,13 +39,9 @@ async function warmUpServer() {
   }
 }
 
-// Auto-run warmup every time app loads
+// Auto-run warmup on app load
 warmUpServer();
 
-// =============================================
-// 🔥 2. PARALLEL WAKE-UP REQUEST
-// (executes at same time as main API request)
-// =============================================
 async function parallelWakeUp() {
   try {
     fetch(`${BACKEND_URL}/api/health`);
@@ -40,40 +49,45 @@ async function parallelWakeUp() {
 }
 
 // =============================================
-// 🔥 3. SMART AUTO-RETRY SYSTEM
+// 🔥 SMART AUTO-RETRY
 // =============================================
 const RETRYABLE_CODES = [408, 429, 500, 502, 503, 504];
 const MAX_RETRIES = 4;
 
 API.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    setRetryLoading(false);
+    return res;
+  },
   async (err) => {
     const config = err.config;
     if (!config) return Promise.reject(err);
 
     config.retryCount = config.retryCount || 0;
-
     const status = err.response?.status;
 
-    const retry =
-      !err.response || // Timeouts / Render asleep
+    const shouldRetry =
+      !err.response || // Network error / timeout
       RETRYABLE_CODES.includes(status);
 
-    if (retry && config.retryCount < MAX_RETRIES) {
+    if (shouldRetry && config.retryCount < MAX_RETRIES) {
       config.retryCount++;
-
       const wait = 400 * config.retryCount;
 
       console.warn(
-        `🔄 Retry ${config.retryCount}/${MAX_RETRIES} (${wait}ms)... → ${config.url}`
+        `🔄 Retry ${config.retryCount}/${MAX_RETRIES} (${wait}ms) → ${config.url}`
       );
 
-      // Attempt to wake Render faster
+      setRetryLoading(true); // show retry indicator
+
+      // Wake Render backend
       parallelWakeUp();
 
       await new Promise((resolve) => setTimeout(resolve, wait));
       return API(config);
     }
+
+    setRetryLoading(false);
 
     if (status === 401) {
       localStorage.removeItem("token");
@@ -85,7 +99,7 @@ API.interceptors.response.use(
 );
 
 // =============================================
-// 🔐 ADD AUTH TOKEN TO REQUESTS
+// 🔐 ADD AUTH TOKEN
 // =============================================
 API.interceptors.request.use(
   (config) => {
@@ -93,6 +107,7 @@ API.interceptors.request.use(
 
     const token = localStorage.getItem("token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
+
     return config;
   },
   (err) => Promise.reject(err)
