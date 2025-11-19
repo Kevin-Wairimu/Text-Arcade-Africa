@@ -1,7 +1,7 @@
 // server.js
 require("dotenv").config();
 const express = require("express");
-const cors = require("cors");
+const cors = require("cors"); // You already have this! We will now use it.
 const mongoose = require("mongoose");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -20,6 +20,7 @@ const PORT = process.env.PORT || 5000;
 
 // ================================
 // ✅ Allowed Frontend Origins
+// (This list is perfect, no changes needed)
 // ================================
 const allowedOrigins = [
   "http://localhost:5173",
@@ -28,31 +29,28 @@ const allowedOrigins = [
   "https://text-arcade-africa.pages.dev",
 ];
 
-// ================================
-// ✅ CORS Middleware
-// Handles credentials & preflight
-// ================================
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+// =============================================================================
+// ✅ **FIXED:** Replaced custom middleware with the standard `cors` package
+// This is more robust and handles all CORS edge cases automatically.
+// =============================================================================
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    // and requests from our whitelist.
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true, // This allows cookies and authorization headers
+};
 
-  if (allowedOrigins.includes(origin)) {
-    res.header("Access-Control-Allow-Origin", origin);
-  }
+// Apply the CORS middleware. This MUST come before your API routes.
+app.use(cors(corsOptions));
+// The cors package automatically handles OPTIONS pre-flight requests.
+// =============================================================================
 
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  );
-  res.header(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-  );
-
-  if (req.method === "OPTIONS") return res.sendStatus(200);
-
-  next();
-});
 
 // ================================
 // ✅ Middleware
@@ -76,13 +74,10 @@ app.use("/api/settings", settingsRoutes);
 // ✅ Health & Warmup Endpoints
 // ================================
 app.get("/api/debug", (req, res) => res.json({ message: "API is live ✅" }));
-
 app.get("/api/ping", (req, res) => res.json({ status: "awake" }));
-
 app.get("/api/health", (req, res) =>
   res.json({ ok: true, message: "Backend ready", uptime: process.uptime() })
 );
-
 app.get("/api/warmup", async (req, res) => {
   try {
     await mongoose.connection.db.admin().ping();
@@ -104,7 +99,11 @@ app.use((req, res) =>
 // ================================
 app.use((err, req, res, next) => {
   console.error("🔥 Server error:", err.message);
-  res.status(500).json({ error: "Internal Server Error", details: err.message });
+  // Hide detailed error messages in production for security
+  const errorMessage = process.env.NODE_ENV === 'production'
+    ? "Internal Server Error"
+    : err.message;
+  res.status(500).json({ error: "Internal Server Error", details: errorMessage });
 });
 
 // ================================
@@ -126,6 +125,8 @@ mongoose
     console.log("✅ Connected to MongoDB Atlas");
 
     const server = http.createServer(app);
+    
+    // Your socket.io CORS config is already perfect!
     const io = new Server(server, {
       cors: { origin: allowedOrigins, credentials: true },
     });
