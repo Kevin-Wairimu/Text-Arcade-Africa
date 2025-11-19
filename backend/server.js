@@ -23,10 +23,16 @@ const PORT = process.env.PORT || 5000;
 // (This list is perfect, no changes needed)
 // ================================
 const allowedOrigins = [
+  // --- Development URLs ---
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://text-africa-arcade.netlify.app",
+
+  // --- Deployed Frontend URLs ---
+  
   "https://text-arcade-africa.pages.dev",
+
+  // --- FIX: ADD YOUR OWN BACKEND URL TO THE LIST ---
+  "https://text-arcade-africa-0dj4.onrender.com",
 ];
 
 // =============================================================================
