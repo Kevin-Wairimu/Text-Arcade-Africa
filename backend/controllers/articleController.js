@@ -47,14 +47,30 @@ exports.getAllArticles = async (req, res) => {
   }
 };
 
+
+// -------------------  THIS IS THE CORRECTED FUNCTION -------------------
 // --- GET article by ID ---
 exports.getArticleById = async (req, res) => {
   try {
     const { id } = req.params;
     const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
 
-    const article = await Article.findOneAndUpdate(query, { $inc: { views: 1 } }, { new: true, lean: true });
-    if (!article) return res.status(404).json({ error: "Article not found" });
+    // --- FIX APPLIED HERE ---
+    // Step 1: Only increment the view count if the request method is 'GET'.
+    // This prevents the browser's 'OPTIONS' pre-flight request from being counted.
+    if (req.method === 'GET') {
+      // We use .updateOne() here because we don't need the document returned from
+      // this specific operation. This is a "fire-and-forget" update.
+      await Article.updateOne(query, { $inc: { views: 1 } });
+    }
+
+    // Step 2: Now, fetch the article with the updated view count.
+    const article = await Article.findOne(query).lean();
+    
+    // Step 3: Check if the article exists and send the response.
+    if (!article) {
+      return res.status(404).json({ error: "Article not found" });
+    }
 
     res.json(article);
   } catch (err) {
@@ -62,6 +78,8 @@ exports.getArticleById = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch article", details: err.message });
   }
 };
+// -------------------------------------------------------------------------
+
 
 // --- CREATE article ---
 exports.createArticle = async (req, res) => {
