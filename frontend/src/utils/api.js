@@ -1,7 +1,9 @@
 // src/utils/api.js
 import axios from "axios";
 
-// Determine backend URL
+// ================================
+// 🔹 Determine Backend URL
+// ================================
 const hostname = window.location.hostname;
 const isProduction = !["localhost", "127.0.0.1"].includes(hostname);
 const BACKEND_URL = isProduction
@@ -11,13 +13,13 @@ const BACKEND_URL = isProduction
 const API = axios.create({
   baseURL: `${BACKEND_URL}/api`,
   timeout: 30000,
-  withCredentials: true, // Important for cookies / JWT in cross-origin
+  withCredentials: true, // ✅ for cookies / JWT in cross-origin
   headers: { "Content-Type": "application/json" },
 });
 
-// =============================================
-// 🔥 FRONTEND RETRY LOADING STATE
-// =============================================
+// ================================
+// 🔹 Frontend Retry Loading State
+// ================================
 let loadingRetryCallback = null; // will be set by frontend
 
 export const onRetryLoadingChange = (callback) => {
@@ -28,9 +30,9 @@ function setRetryLoading(state) {
   if (loadingRetryCallback) loadingRetryCallback(state);
 }
 
-// =============================================
-// 🔥 BACKGROUND WAKE-UP
-// =============================================
+// ================================
+// 🔹 Backend Warmup
+// ================================
 async function warmUpServer() {
   try {
     await fetch(`${BACKEND_URL}/api/health`, { method: "GET", credentials: "include" });
@@ -49,9 +51,9 @@ function parallelWakeUp() {
   } catch {}
 }
 
-// =============================================
-// 🔥 SMART AUTO-RETRY
-// =============================================
+// ================================
+// 🔹 Smart Auto-Retry
+// ================================
 const RETRYABLE_CODES = [408, 429, 500, 502, 503, 504];
 const MAX_RETRIES = 4;
 
@@ -95,9 +97,9 @@ API.interceptors.response.use(
   }
 );
 
-// =============================================
-// 🔐 ADD AUTH TOKEN
-// =============================================
+// ================================
+// 🔹 Add Auth Token to Requests
+// ================================
 API.interceptors.request.use(
   (config) => {
     parallelWakeUp();
