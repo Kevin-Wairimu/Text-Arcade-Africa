@@ -34,17 +34,19 @@ const allowedOrigins = [
 // ================================
 // ✅ CORS Middleware
 // ================================
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-};
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.log("Blocked by CORS:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 
 // ================================
 // ✅ Middleware
@@ -104,11 +106,7 @@ const callCloudflareAPI = async (url) => {
 app.get("/api/cloudflare/access/apps", async (req, res) => {
   try {
     if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
-      return res.status(200).json({
-        warning:
-          "CF_API_TOKEN or CF_ACCOUNT_ID not set. This endpoint will not fetch real data.",
-        data: [],
-      });
+      return res.json({ warning: "CF credentials not set", data: [] });
     }
     const data = await callCloudflareAPI(`/accounts/${CF_ACCOUNT_ID}/access/apps`);
     res.json(data);
@@ -121,11 +119,7 @@ app.get("/api/cloudflare/access/apps", async (req, res) => {
 app.get("/api/cloudflare/access/organizations", async (req, res) => {
   try {
     if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
-      return res.status(200).json({
-        warning:
-          "CF_API_TOKEN or CF_ACCOUNT_ID not set. This endpoint will not fetch real data.",
-        data: [],
-      });
+      return res.json({ warning: "CF credentials not set", data: [] });
     }
     const data = await callCloudflareAPI(
       `/accounts/${CF_ACCOUNT_ID}/access/organizations`
@@ -155,7 +149,7 @@ app.use((err, req, res, next) => {
 });
 
 // ================================
-// ✅ MongoDB Connection
+// ✅ MongoDB Connection + Socket.io
 // ================================
 mongoose.set("strictQuery", true);
 
@@ -165,10 +159,7 @@ if (!process.env.MONGO_URI) {
 }
 
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {
     console.log("✅ Connected to MongoDB Atlas");
 
@@ -188,9 +179,7 @@ mongoose
       socket.on("disconnect", () => console.log("🔴 Disconnected:", socket.id));
     });
 
-    server.listen(PORT, () =>
-      console.log(`🚀 Server running on port ${PORT}`)
-    );
+    server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err.message);
