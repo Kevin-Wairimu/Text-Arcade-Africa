@@ -2,15 +2,16 @@
 import axios from "axios";
 
 // Determine backend URL
-const isProduction = !["localhost", "127.0.0.1"].includes(window.location.hostname);
+const hostname = window.location.hostname;
+const isProduction = !["localhost", "127.0.0.1"].includes(hostname);
 const BACKEND_URL = isProduction
-  ? "https://text-arcade-africa.onrender.com"
+  ? "https://text-arcade-africa-0dj4.onrender.com" // Render backend
   : "http://localhost:5000";
 
 const API = axios.create({
   baseURL: `${BACKEND_URL}/api`,
   timeout: 30000,
-  withCredentials: true,
+  withCredentials: true, // Important for cookies / JWT in cross-origin
   headers: { "Content-Type": "application/json" },
 });
 
@@ -32,19 +33,19 @@ function setRetryLoading(state) {
 // =============================================
 async function warmUpServer() {
   try {
-    await fetch(`${BACKEND_URL}/api/health`, { method: "GET" });
-    console.log("🔥 Render server warmed");
+    await fetch(`${BACKEND_URL}/api/health`, { method: "GET", credentials: "include" });
+    console.log("🔥 Backend warmed");
   } catch (err) {
-    console.log("⚠️ Warm-up failed (Render asleep)");
+    console.warn("⚠️ Warm-up failed (backend asleep or network issue)");
   }
 }
 
 // Auto-run warmup on app load
 warmUpServer();
 
-async function parallelWakeUp() {
+function parallelWakeUp() {
   try {
-    fetch(`${BACKEND_URL}/api/health`);
+    fetch(`${BACKEND_URL}/api/health`, { credentials: "include" });
   } catch {}
 }
 
@@ -66,9 +67,7 @@ API.interceptors.response.use(
     config.retryCount = config.retryCount || 0;
     const status = err.response?.status;
 
-    const shouldRetry =
-      !err.response || // Network error / timeout
-      RETRYABLE_CODES.includes(status);
+    const shouldRetry = !err.response || RETRYABLE_CODES.includes(status);
 
     if (shouldRetry && config.retryCount < MAX_RETRIES) {
       config.retryCount++;
@@ -78,17 +77,15 @@ API.interceptors.response.use(
         `🔄 Retry ${config.retryCount}/${MAX_RETRIES} (${wait}ms) → ${config.url}`
       );
 
-      setRetryLoading(true); // show retry indicator
-
-      // Wake Render backend
+      setRetryLoading(true);
       parallelWakeUp();
-
       await new Promise((resolve) => setTimeout(resolve, wait));
       return API(config);
     }
 
     setRetryLoading(false);
 
+    // Force logout if unauthorized
     if (status === 401) {
       localStorage.removeItem("token");
       window.location.href = "/auth";
@@ -103,7 +100,7 @@ API.interceptors.response.use(
 // =============================================
 API.interceptors.request.use(
   (config) => {
-    parallelWakeUp(); // wake server before request
+    parallelWakeUp();
 
     const token = localStorage.getItem("token");
     if (token) config.headers.Authorization = `Bearer ${token}`;

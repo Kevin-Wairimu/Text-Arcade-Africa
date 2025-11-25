@@ -1,4 +1,3 @@
-// server.js
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -22,31 +21,26 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ================================
-// ✅ Allowed Frontend Origins
+// ✅ CORS Setup
 // ================================
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://text-arcade-africa.pages.dev",
-  "https://text-arcade-africa-0dj4.onrender.com",
-];
+const allowedOrigins = process.env.FRONTEND_URLS
+  ? process.env.FRONTEND_URLS.split(",")
+  : ["http://localhost:5173"];
 
-// ================================
-// ✅ CORS Middleware
-// ================================
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.log("Blocked by CORS:", origin);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // allow requests with no origin (curl, mobile apps)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn("Blocked CORS request from:", origin);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 // ================================
 // ✅ Middleware
@@ -56,7 +50,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("Uploads"));
 
 // ================================
-// ✅ API ROUTES
+// ✅ API Routes
 // ================================
 app.use("/api/auth", authRoutes);
 app.use("/api/articles", articleRoutes);
@@ -67,33 +61,21 @@ app.use("/api/users", userRoutes);
 app.use("/api/settings", settingsRoutes);
 
 // ================================
-// ✅ Health & Warmup Endpoints
+// ✅ Health & Warmup
 // ================================
-app.get("/api/debug", (req, res) => res.json({ message: "API is live ✅" }));
-app.get("/api/ping", (req, res) => res.json({ status: "awake" }));
 app.get("/api/health", (req, res) =>
   res.json({ ok: true, message: "Backend ready", uptime: process.uptime() })
 );
-app.get("/api/warmup", async (req, res) => {
-  try {
-    await mongoose.connection.db.admin().ping();
-    res.json({ warmed: true, message: "Backend warmed" });
-  } catch (err) {
-    res.json({ warmed: false, error: err.message });
-  }
-});
 
 // ================================
-// ✅ Cloudflare API Proxy (Safe)
+// ✅ Cloudflare API Proxy (Optional)
 // ================================
 const CF_API_BASE = "https://api.cloudflare.com/client/v4";
 const CF_API_TOKEN = process.env.CF_API_TOKEN;
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 
-const callCloudflareAPI = async (url) => {
-  if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
-    throw new Error("⚠️ Cloudflare credentials not set in .env");
-  }
+async function callCloudflareAPI(url) {
+  if (!CF_API_TOKEN || !CF_ACCOUNT_ID) throw new Error("Cloudflare credentials missing");
   const res = await axios.get(`${CF_API_BASE}${url}`, {
     headers: {
       Authorization: `Bearer ${CF_API_TOKEN}`,
@@ -101,32 +83,28 @@ const callCloudflareAPI = async (url) => {
     },
   });
   return res.data;
-};
+}
 
 app.get("/api/cloudflare/access/apps", async (req, res) => {
   try {
-    if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
-      return res.json({ warning: "CF credentials not set", data: [] });
-    }
+    if (!CF_API_TOKEN || !CF_ACCOUNT_ID)
+      return res.json({ warning: "CF credentials missing", data: [] });
     const data = await callCloudflareAPI(`/accounts/${CF_ACCOUNT_ID}/access/apps`);
     res.json(data);
   } catch (err) {
-    console.error("Cloudflare Access Apps API error:", err.message);
+    console.error(err);
     res.status(500).json({ error: "Failed to fetch Access Apps" });
   }
 });
 
 app.get("/api/cloudflare/access/organizations", async (req, res) => {
   try {
-    if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
-      return res.json({ warning: "CF credentials not set", data: [] });
-    }
-    const data = await callCloudflareAPI(
-      `/accounts/${CF_ACCOUNT_ID}/access/organizations`
-    );
+    if (!CF_API_TOKEN || !CF_ACCOUNT_ID)
+      return res.json({ warning: "CF credentials missing", data: [] });
+    const data = await callCloudflareAPI(`/accounts/${CF_ACCOUNT_ID}/access/organizations`);
     res.json(data);
   } catch (err) {
-    console.error("Cloudflare Access Organizations API error:", err.message);
+    console.error(err);
     res.status(500).json({ error: "Failed to fetch Access Organizations" });
   }
 });
@@ -134,17 +112,14 @@ app.get("/api/cloudflare/access/organizations", async (req, res) => {
 // ================================
 // ✅ 404 Handler
 // ================================
-app.use((req, res) =>
-  res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` })
-);
+app.use((req, res) => res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` }));
 
 // ================================
 // ✅ Global Error Handler
 // ================================
 app.use((err, req, res, next) => {
   console.error("🔥 Server error:", err.message);
-  const errorMessage =
-    process.env.NODE_ENV === "production" ? "Internal Server Error" : err.message;
+  const errorMessage = process.env.NODE_ENV === "production" ? "Internal Server Error" : err.message;
   res.status(500).json({ error: "Internal Server Error", details: errorMessage });
 });
 
@@ -152,9 +127,8 @@ app.use((err, req, res, next) => {
 // ✅ MongoDB Connection + Socket.io
 // ================================
 mongoose.set("strictQuery", true);
-
 if (!process.env.MONGO_URI) {
-  console.error("❌ MONGO_URI missing in .env");
+  console.error("❌ MONGO_URI missing");
   process.exit(1);
 }
 
