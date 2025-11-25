@@ -1,12 +1,15 @@
 // server.js
 require("dotenv").config();
 const express = require("express");
-const cors = require("cors"); // You already have this! We will now use it.
+const cors = require("cors");
 const mongoose = require("mongoose");
 const http = require("http");
 const { Server } = require("socket.io");
+const axios = require("axios");
 
+// ================================
 // ROUTES
+// ================================
 const authRoutes = require("./routes/auth");
 const articleRoutes = require("./routes/articles");
 const uploadRoutes = require("./routes/upload");
@@ -20,43 +23,28 @@ const PORT = process.env.PORT || 5000;
 
 // ================================
 // ✅ Allowed Frontend Origins
-// (This list is perfect, no changes needed)
 // ================================
 const allowedOrigins = [
-  // --- Development URLs ---
   "http://localhost:5173",
   "http://localhost:3000",
-
-  // --- Deployed Frontend URLs ---
-  
   "https://text-arcade-africa.pages.dev",
-
-  // --- FIX: ADD YOUR OWN BACKEND URL TO THE LIST ---
   "https://text-arcade-africa-0dj4.onrender.com",
 ];
 
-// =============================================================================
-// ✅ **FIXED:** Replaced custom middleware with the standard `cors` package
-// This is more robust and handles all CORS edge cases automatically.
-// =============================================================================
+// ================================
+// ✅ CORS Middleware
+// ================================
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    // and requests from our whitelist.
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
-  credentials: true, // This allows cookies and authorization headers
+  credentials: true,
 };
-
-// Apply the CORS middleware. This MUST come before your API routes.
 app.use(cors(corsOptions));
-// The cors package automatically handles OPTIONS pre-flight requests.
-// =============================================================================
-
 
 // ================================
 // ✅ Middleware
@@ -87,9 +75,65 @@ app.get("/api/health", (req, res) =>
 app.get("/api/warmup", async (req, res) => {
   try {
     await mongoose.connection.db.admin().ping();
-    res.json({ warmed: true, message: "Render backend warmed" });
+    res.json({ warmed: true, message: "Backend warmed" });
   } catch (err) {
     res.json({ warmed: false, error: err.message });
+  }
+});
+
+// ================================
+// ✅ Cloudflare API Proxy (Safe)
+// ================================
+const CF_API_BASE = "https://api.cloudflare.com/client/v4";
+const CF_API_TOKEN = process.env.CF_API_TOKEN;
+const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
+
+const callCloudflareAPI = async (url) => {
+  if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
+    throw new Error("⚠️ Cloudflare credentials not set in .env");
+  }
+  const res = await axios.get(`${CF_API_BASE}${url}`, {
+    headers: {
+      Authorization: `Bearer ${CF_API_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+  });
+  return res.data;
+};
+
+app.get("/api/cloudflare/access/apps", async (req, res) => {
+  try {
+    if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
+      return res.status(200).json({
+        warning:
+          "CF_API_TOKEN or CF_ACCOUNT_ID not set. This endpoint will not fetch real data.",
+        data: [],
+      });
+    }
+    const data = await callCloudflareAPI(`/accounts/${CF_ACCOUNT_ID}/access/apps`);
+    res.json(data);
+  } catch (err) {
+    console.error("Cloudflare Access Apps API error:", err.message);
+    res.status(500).json({ error: "Failed to fetch Access Apps" });
+  }
+});
+
+app.get("/api/cloudflare/access/organizations", async (req, res) => {
+  try {
+    if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
+      return res.status(200).json({
+        warning:
+          "CF_API_TOKEN or CF_ACCOUNT_ID not set. This endpoint will not fetch real data.",
+        data: [],
+      });
+    }
+    const data = await callCloudflareAPI(
+      `/accounts/${CF_ACCOUNT_ID}/access/organizations`
+    );
+    res.json(data);
+  } catch (err) {
+    console.error("Cloudflare Access Organizations API error:", err.message);
+    res.status(500).json({ error: "Failed to fetch Access Organizations" });
   }
 });
 
@@ -105,10 +149,8 @@ app.use((req, res) =>
 // ================================
 app.use((err, req, res, next) => {
   console.error("🔥 Server error:", err.message);
-  // Hide detailed error messages in production for security
-  const errorMessage = process.env.NODE_ENV === 'production'
-    ? "Internal Server Error"
-    : err.message;
+  const errorMessage =
+    process.env.NODE_ENV === "production" ? "Internal Server Error" : err.message;
   res.status(500).json({ error: "Internal Server Error", details: errorMessage });
 });
 
@@ -131,13 +173,11 @@ mongoose
     console.log("✅ Connected to MongoDB Atlas");
 
     const server = http.createServer(app);
-    
-    // Your socket.io CORS config is already perfect!
+
     const io = new Server(server, {
       cors: { origin: allowedOrigins, credentials: true },
     });
 
-    // Attach socket.io to requests
     app.use((req, res, next) => {
       req.io = io;
       next();
