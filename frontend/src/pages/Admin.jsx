@@ -21,8 +21,7 @@ const categories = [
   "Digest", "Innovation", "Trends", "General", "Reports", "Archives",
 ];
 
-// --- FIX: Create a single, shared socket instance outside the component ---
-// This prevents multiple connections from being created by React's Strict Mode.
+// --- SHARED SOCKET INSTANCE ---
 const socket = io(import.meta.env.VITE_API_URL);
 
 export default function Admin() {
@@ -72,7 +71,7 @@ export default function Admin() {
     });
   }, [menuOpen, token]);
 
-  // --- API helper with improved error handling ---
+  // --- API helper ---
   const apiCall = async (method, url, payload, errorKey) => {
     try {
       const response = await API[method](url, payload, {
@@ -198,9 +197,8 @@ export default function Admin() {
     navigate("/");
   };
 
-  // --- FIX: Correctly manage socket event listeners ---
+  // --- FIX: SOCKET LISTENER LOGIC ---
   useEffect(() => {
-    // Define the event handler
     const handleViewsUpdated = (data) => {
       console.log("📊 Real-time view update received:", data);
       setStats((prev) => ({
@@ -209,21 +207,23 @@ export default function Admin() {
       }));
     };
 
-    // Attach the event listener to the single socket instance
+    // 1. Remove any existing listeners for this event to prevent duplicates
+    socket.off("viewsUpdated");
+    
+    // 2. Add the listener
     socket.on("viewsUpdated", handleViewsUpdated);
+
+    // 3. Connect if not connected
     if (!socket.connected) {
       socket.connect();
-      console.log("🟢 Socket connecting...");
     }
 
-    // This cleanup function is crucial. It runs when the component unmounts.
+    // 4. Cleanup on unmount
     return () => {
-      // It ONLY removes the listener, it does not disconnect the shared socket.
       socket.off("viewsUpdated", handleViewsUpdated);
-      console.log("🔴 Socket listener for 'viewsUpdated' removed.");
     };
-  }, []); // The empty dependency array [] ensures this effect runs only when the component mounts/unmounts.
-  
+  }, []); 
+
   // --- JSX ---
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-[#E8F5E9] text-[#2E7D32]">
