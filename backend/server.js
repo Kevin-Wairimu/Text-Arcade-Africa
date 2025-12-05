@@ -8,7 +8,7 @@ const { Server } = require("socket.io");
 const axios = require("axios");
 
 // ================================
-// ROUTES
+// ROUTES IMPORTS
 // ================================
 const authRoutes = require("./routes/auth");
 const articleRoutes = require("./routes/articles");
@@ -22,21 +22,35 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ================================
-// ✅ Allowed Frontend Origins
+// ✅ DYNAMIC CORS CONFIGURATION
 // ================================
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://text-arcade-africa.pages.dev",       // deployed frontend
-  "https://text-arcade-africa-0dj4.onrender.com" // optional for backend calls
-];
+// This helper checks if the origin is allowed
+const isOriginAllowed = (origin) => {
+  // Allow requests with no origin (like mobile apps or curl)
+  if (!origin) return true;
+  
+  // Allow Localhost
+  if (origin.startsWith("http://localhost")) return true;
+  
+  // Allow Main Production Site
+  if (origin === "https://text-arcade-africa.pages.dev") return true;
+
+  // ✅ FIX: Allow ANY Cloudflare Preview URL (subdomains)
+  // This fixes the error: "blocked by CORS policy... origin 'https://43366f51...'"
+  if (origin.endsWith(".text-arcade-africa.pages.dev")) return true;
+
+  // Allow Render Backend (self)
+  if (origin === "https://text-arcade-africa-0dj4.onrender.com") return true;
+
+  return false;
+};
 
 // ================================
-// ✅ CORS Middleware
+// ✅ Express CORS Middleware
 // ================================
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
       console.warn("Blocked CORS request from:", origin);
@@ -44,9 +58,12 @@ const corsOptions = {
     }
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 };
+
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // handle preflight requests
+app.options("*", cors(corsOptions)); // Handle preflight requests explicitly
 
 // ================================
 // ✅ Middleware
@@ -177,11 +194,18 @@ mongoose
     const server = http.createServer(app);
 
     // ================================
-    // ✅ Socket.IO Setup with CORS
+    // ✅ Socket.IO Setup with FIX
     // ================================
     const io = new Server(server, {
       cors: {
-        origin: allowedOrigins,
+        // Socket.io supports REGEX for origins, which is perfect for Cloudflare previews
+        origin: [
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "https://text-arcade-africa.pages.dev",
+            /\.text-arcade-africa\.pages\.dev$/  // <-- THIS REGEX ALLOWS ALL PREVIEW SUBDOMAINS
+        ],
+        methods: ["GET", "POST"],
         credentials: true,
       },
     });
@@ -193,6 +217,7 @@ mongoose
 
     io.on("connection", (socket) => {
       console.log("🟢 New WebSocket connection:", socket.id);
+      
       socket.on("disconnect", () => console.log("🔴 Disconnected:", socket.id));
     });
 
