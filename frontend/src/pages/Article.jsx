@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../utils/api";
+import API, { BACKEND_URL } from "../utils/api";
 import imageCompression from "browser-image-compression";
 import { motion } from "framer-motion";
 

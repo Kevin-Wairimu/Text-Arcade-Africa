@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
 import Nav from "./components/Navbar";
 import Footer from "./components/Footer";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Lazy Loaded Pages
 const Home = lazy(() => import("./pages/Home"));
@@ -40,7 +41,7 @@ export default function App() {
 
   return (
     <HelmetProvider>
-      <div className="min-h-screen flex flex-col bg-taa-surface dark:bg-taa-dark text-taa-dark dark:text-taa-light transition-colors duration-300">
+      <div className="min-h-screen flex flex-col bg-[var(--bg-main)] text-taa-dark dark:text-taa-light transition-colors duration-300">
         <ScrollToTop />
 
         {!hideNavFooter && <Nav />}
@@ -55,7 +56,16 @@ export default function App() {
               <Route path="/contact" element={<Contact />} />
               <Route path="/article/:id" element={<ArticleDetails />} />
               <Route path="/articles/:slug" element={<ArticleDetails />} />
-              <Route path="/client" element={<ClientDashboard />} />
+
+              {/* Protected Client Page */}
+              <Route 
+                path="/client" 
+                element={
+                  <ProtectedRoute allowedRoles={["Client", "Admin", "Employee"]}>
+                    <ClientDashboard />
+                  </ProtectedRoute>
+                } 
+              />
 
               {/* Auth Pages */}
               <Route path="/login" element={<Login />} />
@@ -63,8 +73,15 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-              {/* Admin */}
-              <Route path="/admin" element={<Admin />} />
+              {/* Protected Admin Page */}
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedRoute allowedRoles={["Admin", "Employee"]}>
+                    <Admin />
+                  </ProtectedRoute>
+                } 
+              />
 
               {/* Fallback 404 */}
               <Route

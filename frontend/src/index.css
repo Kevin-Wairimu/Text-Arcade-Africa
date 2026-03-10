@@ -84,3 +84,31 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-taa-primary/20 dark:bg-white/10 rounded-full hover:bg-taa-primary/40 dark:hover:bg-white/20 transition-colors;
+}
+
+/* White Scrollbar for green backgrounds */
+.scrollbar-white::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-white::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+.scrollbar-white::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.scrollbar-white::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.6);
+}

@@ -6,7 +6,7 @@ import axios from "axios";
 // ================================
 const hostname = window.location.hostname;
 const isProduction = !["localhost", "127.0.0.1"].includes(hostname);
-const BACKEND_URL = isProduction
+export const BACKEND_URL = isProduction
   ? "https://text-arcade-africa-0dj4.onrender.com" // Render backend
   : "http://localhost:5000";
 
@@ -46,9 +46,7 @@ async function warmUpServer() {
 warmUpServer();
 
 function parallelWakeUp() {
-  try {
-    fetch(`${BACKEND_URL}/api/health`, { credentials: "include" });
-  } catch {}
+  fetch(`${BACKEND_URL}/api/health`, { credentials: "include" }).catch(() => {});
 }
 
 // ================================
@@ -90,7 +88,7 @@ API.interceptors.response.use(
     // Force logout if unauthorized
     if (status === 401) {
       localStorage.removeItem("token");
-      window.location.href = "/auth";
+      window.location.href = "/login";
     }
 
     return Promise.reject(err);

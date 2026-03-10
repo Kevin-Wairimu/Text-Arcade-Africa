@@ -43,7 +43,7 @@ exports.getAllArticles = async (req, res) => {
     }
 
     const articles = await Article.find(filter)
-      .select("title image category views publishedAt slug author content")
+      .select("title image images category views publishedAt slug author content")
       .sort({ publishedAt: -1 })
       .skip(skip)
       .limit(limit)

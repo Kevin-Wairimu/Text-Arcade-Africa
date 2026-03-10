@@ -1,11 +1,21 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import API from "../utils/api";
+import API, { BACKEND_URL } from "../utils/api";
 import { motion } from "framer-motion";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
-import { ChevronLeft, Download, Share2, Copy, Check, PlayCircle } from "lucide-react";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Download, 
+  Share2, 
+  Copy, 
+  Check, 
+  PlayCircle,
+  Sparkles,
+  Image as ImageIcon
+} from "lucide-react";
 
 const ArticleLoader = () => (
   <div className="flex flex-col justify-center items-center min-h-[80vh] text-center px-4">
@@ -165,23 +175,24 @@ export default function ArticleDetails() {
     }
 
     // Local or direct video URL
-    const isProduction = !["localhost", "127.0.0.1"].includes(window.location.hostname);
-    const BACKEND_URL = isProduction
-      ? "https://text-arcade-africa-0dj4.onrender.com"
-      : "http://localhost:5000";
-
     const videoSrc = article.videoUrl.startsWith('/uploads/') 
       ? `${BACKEND_URL}${article.videoUrl}`
       : article.videoUrl;
 
     return (
-      <div className="relative w-full rounded-3xl overflow-hidden mb-12 shadow-2xl bg-black">
+      <div className="relative w-full rounded-3xl overflow-hidden mb-12 shadow-2xl bg-black aspect-video">
         <video 
+          key={videoSrc}
           controls 
-          className="w-full"
+          playsInline
+          preload="auto"
+          className="w-full h-full object-contain"
           poster={article.image || article.images?.[0]}
+          onContextMenu={(e) => e.preventDefault()}
         >
-          <source src={videoSrc} />
+          <source src={videoSrc} type="video/mp4" />
+          <source src={videoSrc} type="video/webm" />
+          <source src={videoSrc} type="video/ogg" />
           Your browser does not support the video tag.
         </video>
       </div>
@@ -193,12 +204,6 @@ export default function ArticleDetails() {
     if (!img) return `${window.location.origin}/logo-icon.svg`;
     if (img.startsWith('http')) return img;
     
-    // Determine Backend URL (same logic as renderVideo)
-    const isProduction = !["localhost", "127.0.0.1"].includes(window.location.hostname);
-    const BACKEND_URL = isProduction
-      ? "https://text-arcade-africa-0dj4.onrender.com"
-      : "http://localhost:5000";
-      
     return img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : `${window.location.origin}${img}`;
   };
 
@@ -230,9 +235,9 @@ export default function ArticleDetails() {
 
       <Helmet>
         <title>{article.title} | Text Africa Arcade</title>
-        <meta name="description" content={article.content.substring(0, 160)} />
+        <meta name="description" content={(article.content || "").substring(0, 160)} />
         <meta property="og:title" content={article.title} />
-        <meta property="og:description" content={article.content.substring(0, 160)} />
+        <meta property="og:description" content={(article.content || "").substring(0, 160)} />
         <meta property="og:image" content={getAbsoluteImageUrl()} />
         <meta property="og:url" content={window.location.href} />
         <meta property="og:type" content="article" />
@@ -331,12 +336,36 @@ export default function ArticleDetails() {
 
             {renderVideo()}
 
+            {/* Image Gallery */}
+            {article.images && article.images.length > 1 && (
+              <div className="mb-12">
+                <h3 className="text-xl font-black text-taa-dark dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                  <Sparkles size={18} className="text-taa-primary" /> Story Gallery
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {article.images.map((img, i) => (
+                    <motion.div 
+                      key={i}
+                      whileHover={{ scale: 1.02 }}
+                      className="aspect-square rounded-2xl overflow-hidden border border-taa-primary/10 shadow-md cursor-pointer"
+                      onClick={() => window.open(img, '_blank')}
+                    >
+                      <img src={img} className="w-full h-full object-cover" alt={`Gallery ${i}`} />
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div 
               ref={articleRef} 
-              className="prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300 whitespace-pre-line text-justify mb-20"
-            >
-              {article.content}
-            </div>
+              className="prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300 whitespace-pre-line text-justify mb-20 article-content"
+              dangerouslySetInnerHTML={{ 
+                __html: (article.content || "")
+                  .replace(/\n/g, '<br/>')
+                  .replace(/<img/g, '<img class="w-full rounded-3xl my-8 shadow-xl border border-taa-primary/5"')
+              }}
+            />
 
             {article.sourceUrl && (
               <div className="mb-20 pt-10 border-t border-taa-primary/5">

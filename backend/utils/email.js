@@ -6,26 +6,29 @@ const nodemailer = require("nodemailer");
 const createTransporter = () => {
   const user = process.env.SMTP_USER || process.env.EMAIL_USER;
   const pass = process.env.SMTP_PASS || process.env.EMAIL_PASS;
+  const host = process.env.SMTP_HOST || "smtp.gmail.com";
+  const port = parseInt(process.env.SMTP_PORT) || 465;
 
-  // Check if it's Gmail (either by host or email domain)
-  const isGmail = process.env.SMTP_HOST?.includes("gmail") || 
-                  user?.includes("gmail");
+  const isGmail = host.includes("gmail") || user?.includes("gmail");
 
   if (isGmail) {
     return nodemailer.createTransport({
       service: 'gmail',
       auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false, // Ensures SSL/TLS works in strict deployment environments
+      },
     });
   }
 
   // Fallback to custom SMTP
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: parseInt(process.env.SMTP_PORT) === 465,
+    host: host,
+    port: port,
+    secure: port === 465, // true for 465, false for other ports
     auth: { user, pass },
     tls: {
-      rejectUnauthorized: false, // Helps with some shared hosting providers
+      rejectUnauthorized: false, 
     },
   });
 };

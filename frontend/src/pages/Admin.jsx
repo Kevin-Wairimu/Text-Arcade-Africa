@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import API from "../utils/api";
+import API, { BACKEND_URL } from "../utils/api";
 import imageCompression from "browser-image-compression";
 import { motion, AnimatePresence } from "framer-motion";
 import { io } from "socket.io-client";
@@ -44,7 +44,7 @@ import {
   Share2
 } from "lucide-react";
 
-const socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000");
+const socket = io(import.meta.env.VITE_SOCKET_URL || BACKEND_URL);
 
 const CATEGORIES = [
   "Media Review", "Expert Insights", "Reflections", "Technology", "Events",
@@ -75,7 +75,7 @@ export default function Admin() {
   const [userForm, setUserForm] = useState({
     name: "", email: "", password: "", role: "Client"
   });
-  const [editingUser, setEditingArticleUser] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
 
   const [menuOpen, setMenuOpen] = useState(
@@ -93,9 +93,18 @@ export default function Admin() {
 
   const apiCall = useCallback(async (method, url, payload, errorKey) => {
     try {
-      const response = await API[method](url, payload, {
+      const config = {
         headers: { Authorization: `Bearer ${token}` },
-      });
+      };
+      
+      let response;
+      const lowerMethod = method.toLowerCase();
+      if (lowerMethod === 'get' || lowerMethod === 'delete') {
+        response = await API[lowerMethod](url, config);
+      } else {
+        response = await API[lowerMethod](url, payload, config);
+      }
+      
       return response.data;
     } catch (err) {
       const status = err.response?.status;
@@ -266,7 +275,7 @@ export default function Admin() {
       await fetchUsers();
       setShowUserModal(false);
       setUserForm({ name: "", email: "", password: "", role: "Client" });
-      setEditingArticleUser(null);
+      setEditingUser(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -274,7 +283,7 @@ export default function Admin() {
 
   const handleUserEdit = (user) => {
     setUserForm({ name: user.name, email: user.email, password: "", role: user.role });
-    setEditingArticleUser(user._id);
+    setEditingUser(user._id);
     setShowUserModal(true);
   };
 
@@ -282,6 +291,12 @@ export default function Admin() {
     if (!window.confirm("Delete this user permanently?")) return;
     await apiCall("delete", `/users/${id}`, null, "users");
     await fetchUsers();
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this story permanently?")) return;
+    await apiCall("delete", `/articles/${id}`, null, "articles");
+    await fetchArticles();
   };
 
   const toggleSuspension = async (user) => {
@@ -421,7 +436,7 @@ export default function Admin() {
                       <h3 className="text-xl font-black text-taa-dark dark:text-white">Distribution</h3>
                     </div>
                     <div className="h-[300px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <BarChart data={getCategoryData}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" strokeOpacity={0.5} />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold'}} />
@@ -441,7 +456,7 @@ export default function Admin() {
                       <h3 className="text-xl font-black text-taa-dark dark:text-white">Recent Impact</h3>
                     </div>
                     <div className="h-[300px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <AreaChart data={getRecentPerformance}>
                           <defs>
                             <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#77BFA1" stopOpacity={0.3}/><stop offset="95%" stopColor="#77BFA1" stopOpacity={0}/></linearGradient>
@@ -488,7 +503,10 @@ export default function Admin() {
                         {articleForm.images.map((img, i) => (
                           <div key={i} className="relative w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden group border-2 border-taa-primary/10 shadow-lg">
                             <img src={img} className="w-full h-full object-cover" alt="story" />
-                            <button type="button" onClick={() => removeImage(i)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                                <button type="button" onClick={() => removeImage(i)} className="p-1.5 bg-red-500 text-white rounded-full"><X size={12} /></button>
+                                <button type="button" onClick={() => { navigator.clipboard.writeText(`<img src="${img}" />`); alert("Inline image code copied! Paste it anywhere in the article body content."); }} className="p-1.5 bg-taa-accent text-white rounded-full" title="Copy for Inline Use"><ImageIcon size={12} /></button>
+                            </div>
                             {i === 0 && <span className="absolute bottom-0 left-0 right-0 bg-taa-primary text-white text-[8px] font-black text-center py-1 uppercase">Cover</span>}
                           </div>
                         ))}
@@ -566,7 +584,7 @@ export default function Admin() {
                     <div className="w-12 h-12 rounded-2xl bg-taa-primary text-white flex items-center justify-center shadow-lg"><UsersIcon size={24} /></div>
                     <div><h3 className="text-xl font-black text-taa-dark dark:text-white">Management</h3><p className="text-[10px] text-gray-500 font-bold uppercase">{users.length} Records</p></div>
                   </div>
-                  <button onClick={() => { setEditingArticleUser(null); setUserForm({name:"", email:"", password:"", role:"Client"}); setShowUserModal(true); }} className="w-full sm:w-auto px-6 py-3 bg-taa-primary text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg">
+                  <button onClick={() => { setEditingUser(null); setUserForm({name:"", email:"", password:"", role:"Client"}); setShowUserModal(true); }} className="w-full sm:w-auto px-6 py-3 bg-taa-primary text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg">
                     <UserPlus size={18} /> PROVISION
                   </button>
                 </div>

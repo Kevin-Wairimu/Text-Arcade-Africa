@@ -35,8 +35,8 @@ export default function Contact() {
     { 
       icon: Mail, 
       label: "Email Us", 
-      value: "textafricaarcade.com",
-      link: "mailto:hello@textafricaarcade.com"
+      value: "textafricaarcade@gmail.com",
+      link: "textafricaarcade@gmail.com"
     },
     { 
       icon: MapPin, 
@@ -44,12 +44,12 @@ export default function Contact() {
       value: "Nairobi, Kenya",
       link: "#"
     },
-    { 
-      icon: Globe, 
-      label: "Socials", 
-      value: "@textafricaarcade",
-      link: "https://twitter.com"
-    }
+    // { 
+    //   icon: Globe, 
+    //   label: "Socials", 
+    //   value: "@textafricaarcade",
+    //   link: "https://twitter.com"
+    // }
   ];
 
   return (
