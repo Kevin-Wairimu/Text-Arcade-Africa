@@ -311,7 +311,7 @@ export default function Home() {
               >
                 <span className="text-taa-primary dark:text-taa-accent font-bold uppercase tracking-widest text-sm">Discover</span>
                 <h2 className="text-4xl md:text-5xl font-black text-taa-dark dark:text-white mt-2">
-                  The Digital Hub
+                  The Digital Lab
                 </h2>
               </motion.div>
 

@@ -43,8 +43,8 @@ exports.getAllArticles = async (req, res) => {
     }
 
     const articles = await Article.find(filter)
-      .select("title image images category views publishedAt slug author content")
-      .sort({ publishedAt: -1 })
+      .select("title image images category views publishedAt slug author content order")
+      .sort({ order: 1, publishedAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
@@ -154,5 +154,26 @@ exports.deleteArticle = async (req, res) => {
   } catch (err) {
     console.error("Error deleting article:", err);
     res.status(500).json({ error: "Failed to delete article", details: err.message });
+  }
+};
+
+// --- REORDER articles ---
+exports.reorderArticles = async (req, res) => {
+  try {
+    const { orders } = req.body; 
+    if (!Array.isArray(orders)) return res.status(400).json({ error: "Orders array required" });
+
+    const bulkOps = orders.map(({ id, order }) => ({
+      updateOne: {
+        filter: { _id: id },
+        update: { order }
+      }
+    }));
+
+    await Article.bulkWrite(bulkOps);
+    res.json({ message: "Order updated successfully" });
+  } catch (err) {
+    console.error("Error reordering articles:", err);
+    res.status(500).json({ error: "Failed to reorder", details: err.message });
   }
 };

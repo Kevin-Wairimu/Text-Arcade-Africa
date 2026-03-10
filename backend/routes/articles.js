@@ -103,6 +103,7 @@ router.get("/:id/pdf", authenticateToken, async (req, res) => {
 });
 
 // --- ADMIN ROUTES ---
+router.post("/reorder", protect, admin, articleController.reorderArticles);
 router.post("/", protect, admin, articleController.createArticle);
 router.put("/:id", protect, admin, articleController.updateArticle);
 router.delete("/:id", protect, admin, articleController.deleteArticle);

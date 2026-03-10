@@ -224,56 +224,46 @@ export default function ArticleDetails() {
   }
 
   // Derived calculations - safe to perform now that article is guaranteed to exist
+  const isVintage = article.slug === "safaricom-sale-forget-spin-doctors-ruto-needs-truth-doctors";
   const coverImage = article.image || article.images?.[0];
   const otherImages = article.images ? article.images.filter(img => img !== coverImage) : [];
-
-  const storyGalleryImages = otherImages.slice(0, Math.ceil(otherImages.length / 2));
-  const storyDelegatesImages = otherImages.slice(Math.ceil(otherImages.length / 2));
 
   const formattedContent = (article.content || "")
     .replace(/\n/g, '<br/>')
     .replace(/src="\/uploads\//g, `src="${BACKEND_URL}/uploads/`)
-    .replace(/<img/g, '<img class="w-full rounded-3xl my-8 shadow-xl border border-taa-primary/5"');
+    .replace(/<img/g, `<img class="w-full rounded-${isVintage ? 'none' : '3xl'} my-8 shadow-xl border border-taa-primary/5"`);
 
   const contentParts = (() => {
     // Normalize line breaks to handle different OS formats and ensure we split by paragraphs
     const normalizedContent = formattedContent.replace(/\r\n/g, '\n');
     const doubleBreaks = normalizedContent.split('<br/><br/>');
     
-    if (doubleBreaks.length >= 3) {
-      const oneThird = Math.floor(doubleBreaks.length / 3);
-      const twoThirds = Math.floor(2 * doubleBreaks.length / 3);
+    if (doubleBreaks.length >= 2) {
+      const midpoint = Math.floor(doubleBreaks.length / 2);
       return [
-        doubleBreaks.slice(0, oneThird).join('<br/><br/>'),
-        doubleBreaks.slice(oneThird, twoThirds).join('<br/><br/>'),
-        doubleBreaks.slice(twoThirds).join('<br/><br/>')
+        doubleBreaks.slice(0, midpoint).join('<br/><br/>'),
+        doubleBreaks.slice(midpoint).join('<br/><br/>')
       ];
     }
     
     const singleBreaks = normalizedContent.split('<br/>');
-    if (singleBreaks.length >= 6) {
-      const oneThird = Math.floor(singleBreaks.length / 3);
-      const twoThirds = Math.floor(2 * singleBreaks.length / 3);
+    if (singleBreaks.length >= 4) {
+      const midpoint = Math.floor(singleBreaks.length / 2);
       return [
-        singleBreaks.slice(0, oneThird).join('<br/>'),
-        singleBreaks.slice(oneThird, twoThirds).join('<br/>'),
-        singleBreaks.slice(twoThirds).join('<br/>')
+        singleBreaks.slice(0, midpoint).join('<br/>'),
+        singleBreaks.slice(midpoint).join('<br/>')
       ];
     }
 
-    if (doubleBreaks.length === 2) {
-      return [doubleBreaks[0], doubleBreaks[1], ''];
-    }
-    
-    return [normalizedContent, '', ''];
+    return [normalizedContent, ''];
   })();
 
   return (
-    <main className="bg-taa-surface dark:bg-taa-dark min-h-screen pb-20 transition-colors duration-300">
+    <main className={`${isVintage ? 'bg-[#fdfbf7]' : 'bg-taa-surface dark:bg-taa-dark'} min-h-screen pb-20 transition-colors duration-300`}>
       {/* Reading Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-taa-primary/10">
         <motion.div 
-          className="h-full bg-taa-primary shadow-[0_0_10px_#1E6B2B]"
+          className={`h-full ${isVintage ? 'bg-black' : 'bg-taa-primary'} shadow-[0_0_10px_#1E6B2B]`}
           style={{ width: `${scrollProgress}%` }}
         />
       </div>
@@ -293,65 +283,66 @@ export default function ArticleDetails() {
       <div className="max-w-4xl mx-auto px-6 pt-12">
         <Link 
           to="/" 
-          className="inline-flex items-center gap-2 text-taa-primary dark:text-taa-accent font-bold mb-8 hover:-translate-x-2 transition-transform"
+          className={`inline-flex items-center gap-2 ${isVintage ? 'text-black font-serif border-b border-black' : 'text-taa-primary dark:text-taa-accent font-bold'} mb-8 hover:-translate-x-2 transition-transform`}
         >
-          <ChevronLeft size={20} /> Back to Hub
+          <ChevronLeft size={20} /> {isVintage ? 'Back to Publications' : 'Back to Hub'}
         </Link>
 
-        <article className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] overflow-hidden shadow-2xl border border-taa-primary/5">
+        <article className={`${isVintage ? 'bg-[#f4ecd8] border-2 border-black/20 shadow-[20px_20px_0px_rgba(0,0,0,0.05)] rounded-none' : 'bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl border border-taa-primary/5'} overflow-hidden`}>
           {/* Header Image */}
           {(article.image || article.images?.[0]) && (
-            <div className="relative h-[300px] md:h-[600px] w-full">
+            <div className={`relative ${isVintage ? 'h-[400px] grayscale' : 'h-[300px] md:h-[600px]'} w-full`}>
               <img
                 src={(article.image || article.images?.[0]).startsWith('/uploads/') ? `${BACKEND_URL}${article.image || article.images?.[0]}` : (article.image || article.images?.[0])}
                 alt={article.title}
                 className="w-full h-full object-cover"
                 crossOrigin="anonymous"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+              {!isVintage && <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />}
+              {isVintage && <div className="absolute inset-0 bg-black/10 mix-blend-multiply" />}
               <div className="absolute bottom-12 left-8 right-8 md:left-12 md:right-12">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="px-4 py-1.5 bg-taa-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full">
+                  <span className={`${isVintage ? 'bg-black text-white px-3 py-1 font-serif italic' : 'px-4 py-1.5 bg-taa-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full'}`}>
                     {article.category || "Insight"}
                   </span>
-                  <span className="text-white/60 text-[10px] font-black uppercase tracking-widest">
+                  <span className={`${isVintage ? 'text-black/80 font-serif italic' : 'text-white/60 text-[10px] font-black uppercase tracking-widest'}`}>
                     {readingTime} MIN READ
                   </span>
                 </div>
-                <h1 className="text-3xl md:text-6xl font-black text-white leading-[1.1] drop-shadow-2xl">
+                <h1 className={`${isVintage ? 'text-4xl md:text-6xl font-serif font-black text-black leading-tight border-l-4 border-black pl-6' : 'text-3xl md:text-6xl font-black text-white leading-[1.1] drop-shadow-2xl'}`}>
                   {article.title}
                 </h1>
               </div>
             </div>
           )}
 
-          <div className="p-8 md:p-16">
+          <div className={`${isVintage ? 'p-10 md:p-20' : 'p-8 md:p-16'}`}>
             {!(article.image || article.images?.[0]) && (
               <div className="mb-12">
                 <div className="flex items-center gap-3 mb-6">
-                  <span className="px-4 py-1.5 bg-taa-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full">
+                  <span className={`${isVintage ? 'bg-black text-white px-3 py-1 font-serif italic' : 'px-4 py-1.5 bg-taa-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full'}`}>
                     {article.category || "Insight"}
                   </span>
-                  <span className="text-taa-primary/60 dark:text-white/40 text-[10px] font-black uppercase tracking-widest">
+                  <span className={`${isVintage ? 'text-black/60 font-serif italic' : 'text-taa-primary/60 dark:text-white/40 text-[10px] font-black uppercase tracking-widest'}`}>
                     {readingTime} MIN READ
                   </span>
                 </div>
-                <h1 className="text-4xl md:text-7xl font-black text-taa-dark dark:text-white leading-[1.1] tracking-tight">
+                <h1 className={`${isVintage ? 'text-4xl md:text-7xl font-serif font-black text-black leading-tight border-b-2 border-black/10 pb-8' : 'text-4xl md:text-7xl font-black text-taa-dark dark:text-white leading-[1.1] tracking-tight'}`}>
                   {article.title}
                 </h1>
               </div>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-8 mb-16 pb-10 border-b border-taa-primary/10">
+            <div className={`flex flex-wrap items-center justify-between gap-8 mb-16 pb-10 border-b ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
               <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-taa-primary text-white flex items-center justify-center font-black text-2xl shadow-lg shadow-taa-primary/20">
+                <div className={`w-14 h-14 ${isVintage ? 'bg-black rounded-none' : 'rounded-2xl bg-taa-primary'} text-white flex items-center justify-center font-black text-2xl shadow-lg`}>
                   {article.author?.[0] || "T"}
                 </div>
                 <div>
-                  <p className="font-black text-taa-dark dark:text-white text-lg">
+                  <p className={`font-black ${isVintage ? 'text-black font-serif italic text-xl' : 'text-taa-dark dark:text-white text-lg'}`}>
                     {article.author || "Text Africa Arcade"}
                   </p>
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">
+                  <p className={`text-xs ${isVintage ? 'text-black/60 font-serif italic' : 'text-gray-500 font-bold uppercase tracking-widest'}`}>
                     {new Date(article.createdAt).toLocaleDateString("en-US", {
                       month: "long",
                       day: "numeric",
@@ -365,14 +356,14 @@ export default function ArticleDetails() {
                 <button
                   id="pdf-btn"
                   onClick={handleDownloadPDF}
-                  className="p-4 bg-taa-primary/5 text-taa-primary dark:text-taa-accent rounded-2xl hover:bg-taa-primary hover:text-white transition-all active:scale-95 border border-taa-primary/10"
+                  className={`p-4 ${isVintage ? 'bg-black/5 text-black hover:bg-black hover:text-white rounded-none border border-black' : 'bg-taa-primary/5 text-taa-primary dark:text-taa-accent rounded-2xl hover:bg-taa-primary hover:text-white border border-taa-primary/10'} transition-all active:scale-95`}
                   title="Download as PDF"
                 >
                   <Download size={20} />
                 </button>
                 <button
                   onClick={handleShare}
-                  className="flex items-center gap-2 bg-taa-primary text-white px-8 py-4 rounded-2xl font-black text-sm shadow-xl shadow-taa-primary/20 hover:brightness-110 active:scale-95 transition-all"
+                  className={`flex items-center gap-2 ${isVintage ? 'bg-black text-white rounded-none px-8 py-4 font-serif italic' : 'bg-taa-primary text-white px-8 py-4 rounded-2xl font-black shadow-xl shadow-taa-primary/20'} text-sm hover:brightness-110 active:scale-95 transition-all`}
                 >
                   <Share2 size={18} /> SHARE STORY
                 </button>
@@ -381,108 +372,66 @@ export default function ArticleDetails() {
 
             {renderVideo()}
 
-            {/* Main Article Content with Galleries interspersed */}
-            <div ref={articleRef}>
+            {/* Main Article Content with combined gallery */}
+            <div ref={articleRef} className={isVintage ? "font-serif text-black leading-relaxed" : ""}>
               <div 
-                className="prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300 whitespace-pre-line text-justify mb-12 article-content"
+                className={`${isVintage ? 'prose-2xl text-black' : 'prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-pre-line text-justify mb-12 article-content`}
                 dangerouslySetInnerHTML={{ __html: contentParts[0] }}
               />
 
-              {/* Story Gallery - Moved to first interval */}
-              {storyGalleryImages.length > 0 && (
-                <div className="my-16 py-12 border-y border-taa-primary/10">
-                  <h3 className="text-xl font-black text-taa-dark dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                    <Sparkles size={18} className="text-taa-primary" /> Story Delegates
+              {/* Combined Story Delegates Gallery */}
+              {otherImages.length > 0 && (
+                <div className={`my-16 py-12 border-y ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
+                  <h3 className={`text-xl font-black ${isVintage ? 'text-black font-serif italic' : 'text-taa-dark dark:text-white'} mb-6 uppercase tracking-widest flex items-center gap-2`}>
+                    <Sparkles size={18} className={isVintage ? 'text-black' : 'text-taa-primary'} /> Story Delegates
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {storyGalleryImages.map((img, i) => (
-                      <motion.div 
-                        key={i}
-                        whileHover={{ scale: 1.02 }}
-                        className="aspect-square rounded-2xl overflow-hidden border border-taa-primary/10 shadow-md cursor-pointer"
-                        onClick={() => window.open(img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img, '_blank')}
-                      >
-                        <img src={img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img} className="w-full h-full object-cover" alt={`Gallery ${i}`} />
-                      </motion.div>
-                    ))}
+                  <div className={`grid grid-cols-2 ${otherImages.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
+                    {otherImages.map((img, i) => {
+                      const label = article.imageLabels?.[img];
+                      return (
+                        <motion.div 
+                          key={i}
+                          whileHover={{ scale: 1.02 }}
+                          className="flex flex-col gap-3"
+                        >
+                          <div 
+                            className={`aspect-square ${isVintage ? 'rounded-none border-2 border-black/10' : 'rounded-2xl border border-taa-primary/10 shadow-md'} overflow-hidden cursor-pointer`}
+                            onClick={() => window.open(img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img, '_blank')}
+                          >
+                            <img src={img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img} className={`w-full h-full object-cover ${isVintage ? 'grayscale' : ''}`} alt={label || `Delegate ${i}`} />
+                          </div>
+                          {label && (
+                            <p className={`text-center text-[10px] font-black uppercase tracking-[0.2em] ${isVintage ? 'text-black/60 font-serif italic' : 'text-taa-primary/60 dark:text-white/40'}`}>
+                              {label}
+                            </p>
+                          )}
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
               {contentParts[1] && (
                 <div 
-                  className="prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300 whitespace-pre-line text-justify mb-12 article-content"
+                  className={`${isVintage ? 'prose-2xl text-black' : 'prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-pre-line text-justify mb-12 article-content`}
                   dangerouslySetInnerHTML={{ __html: contentParts[1] }}
-                />
-              )}
-
-              {/* Story Delegates Gallery - Moved to second interval */}
-              {storyDelegatesImages.length > 0 && (
-                <div className="my-16 py-12 border-y border-taa-primary/10">
-                  <h3 className="text-xl font-black text-taa-dark dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                    <Sparkles size={18} className="text-taa-primary" /> Story Delegates
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {storyDelegatesImages.map((img, i) => (
-                      <motion.div 
-                        key={i}
-                        whileHover={{ scale: 1.02 }}
-                        className="aspect-square rounded-2xl overflow-hidden border border-taa-primary/10 shadow-md cursor-pointer"
-                        onClick={() => window.open(img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img, '_blank')}
-                      >
-                        <img src={img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img} className="w-full h-full object-cover" alt={`Delegate ${i}`} />
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {contentParts[2] && (
-                <div 
-                  className="prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300 whitespace-pre-line text-justify mb-20 article-content"
-                  dangerouslySetInnerHTML={{ __html: contentParts[2] }}
                 />
               )}
             </div>
 
             {article.sourceUrl && (
-              <div className="mb-20 pt-10 border-t border-taa-primary/5">
+              <div className={`mb-20 pt-10 border-t ${isVintage ? 'border-black/20' : 'border-taa-primary/5'}`}>
                 <a
                   href={article.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-4 bg-taa-dark dark:bg-taa-primary text-white font-black px-10 py-5 rounded-2xl hover:brightness-110 shadow-2xl transition-all"
+                  className={`inline-flex items-center gap-4 ${isVintage ? 'bg-black rounded-none font-serif italic' : 'bg-taa-dark dark:bg-taa-primary rounded-2xl font-black'} text-white px-10 py-5 hover:brightness-110 shadow-2xl transition-all`}
                 >
                   Explore Original Source <ChevronRight size={20} />
                 </a>
               </div>
             )}
-
-            {/* Re-designed Sharing Section */}
-            {/* <div className="bg-taa-primary/5 dark:bg-white/5 rounded-[2rem] p-10 border border-taa-primary/10 relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-taa-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-               <div className="relative z-10">
-                <h4 className="text-2xl font-black text-taa-dark dark:text-white mb-2">Did you find this insightful?</h4>
-                <p className="text-gray-500 dark:text-gray-400 font-bold text-sm mb-8 uppercase tracking-widest">Help spread the word to your network</p>
-                
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1 relative group">
-                    <input
-                      type="text"
-                      readOnly
-                      value={getArticleLink()}
-                      className="w-full bg-white dark:bg-taa-dark border-2 border-transparent focus:border-taa-primary rounded-2xl p-5 text-sm font-black text-gray-400 outline-none shadow-inner transition-all"
-                    />
-                    <button 
-                      onClick={handleCopy}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-taa-primary hover:bg-taa-primary/10 rounded-xl transition-all"
-                    >
-                      {copied ? <Check size={22} className="text-green-500" /> : <Copy size={22} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div> */}
           </div>
         </article>
 
