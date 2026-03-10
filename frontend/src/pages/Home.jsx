@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, NavLink } from "react-router-dom";
 import Hero from "../components/Hero";
-import API from "../utils/api";
+import API, { BACKEND_URL } from "../utils/api";
 import { 
   Search, 
   X, 
@@ -67,7 +67,10 @@ SkeletonCard.displayName = "SkeletonCard";
 
 const ArticleCard = memo(({ article, index, onReadMore }) => {
   if (!article) return null;
-  const imageUrl = article.image || "https://via.placeholder.com/600x400?text=No+Image";
+  const rawImage = article.image || article.images?.[0];
+  const imageUrl = rawImage 
+    ? (rawImage.startsWith('/uploads/') ? `${BACKEND_URL}${rawImage}` : rawImage)
+    : "https://via.placeholder.com/600x400?text=No+Image";
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.role === "Admin";
   

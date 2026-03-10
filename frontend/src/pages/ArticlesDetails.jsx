@@ -223,6 +223,51 @@ export default function ArticleDetails() {
     );
   }
 
+  // Derived calculations - safe to perform now that article is guaranteed to exist
+  const coverImage = article.image || article.images?.[0];
+  const otherImages = article.images ? article.images.filter(img => img !== coverImage) : [];
+
+  const storyGalleryImages = otherImages.slice(0, Math.ceil(otherImages.length / 2));
+  const storyDelegatesImages = otherImages.slice(Math.ceil(otherImages.length / 2));
+
+  const formattedContent = (article.content || "")
+    .replace(/\n/g, '<br/>')
+    .replace(/src="\/uploads\//g, `src="${BACKEND_URL}/uploads/`)
+    .replace(/<img/g, '<img class="w-full rounded-3xl my-8 shadow-xl border border-taa-primary/5"');
+
+  const contentParts = (() => {
+    // Normalize line breaks to handle different OS formats and ensure we split by paragraphs
+    const normalizedContent = formattedContent.replace(/\r\n/g, '\n');
+    const doubleBreaks = normalizedContent.split('<br/><br/>');
+    
+    if (doubleBreaks.length >= 3) {
+      const oneThird = Math.floor(doubleBreaks.length / 3);
+      const twoThirds = Math.floor(2 * doubleBreaks.length / 3);
+      return [
+        doubleBreaks.slice(0, oneThird).join('<br/><br/>'),
+        doubleBreaks.slice(oneThird, twoThirds).join('<br/><br/>'),
+        doubleBreaks.slice(twoThirds).join('<br/><br/>')
+      ];
+    }
+    
+    const singleBreaks = normalizedContent.split('<br/>');
+    if (singleBreaks.length >= 6) {
+      const oneThird = Math.floor(singleBreaks.length / 3);
+      const twoThirds = Math.floor(2 * singleBreaks.length / 3);
+      return [
+        singleBreaks.slice(0, oneThird).join('<br/>'),
+        singleBreaks.slice(oneThird, twoThirds).join('<br/>'),
+        singleBreaks.slice(twoThirds).join('<br/>')
+      ];
+    }
+
+    if (doubleBreaks.length === 2) {
+      return [doubleBreaks[0], doubleBreaks[1], ''];
+    }
+    
+    return [normalizedContent, '', ''];
+  })();
+
   return (
     <main className="bg-taa-surface dark:bg-taa-dark min-h-screen pb-20 transition-colors duration-300">
       {/* Reading Progress Bar */}
@@ -255,10 +300,10 @@ export default function ArticleDetails() {
 
         <article className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] overflow-hidden shadow-2xl border border-taa-primary/5">
           {/* Header Image */}
-          {article.image && (
+          {(article.image || article.images?.[0]) && (
             <div className="relative h-[300px] md:h-[600px] w-full">
               <img
-                src={article.image}
+                src={(article.image || article.images?.[0]).startsWith('/uploads/') ? `${BACKEND_URL}${article.image || article.images?.[0]}` : (article.image || article.images?.[0])}
                 alt={article.title}
                 className="w-full h-full object-cover"
                 crossOrigin="anonymous"
@@ -281,7 +326,7 @@ export default function ArticleDetails() {
           )}
 
           <div className="p-8 md:p-16">
-            {!article.image && (
+            {!(article.image || article.images?.[0]) && (
               <div className="mb-12">
                 <div className="flex items-center gap-3 mb-6">
                   <span className="px-4 py-1.5 bg-taa-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full">
@@ -336,36 +381,69 @@ export default function ArticleDetails() {
 
             {renderVideo()}
 
-            {/* Image Gallery */}
-            {article.images && article.images.length > 1 && (
-              <div className="mb-12">
-                <h3 className="text-xl font-black text-taa-dark dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                  <Sparkles size={18} className="text-taa-primary" /> Story Gallery
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {article.images.map((img, i) => (
-                    <motion.div 
-                      key={i}
-                      whileHover={{ scale: 1.02 }}
-                      className="aspect-square rounded-2xl overflow-hidden border border-taa-primary/10 shadow-md cursor-pointer"
-                      onClick={() => window.open(img, '_blank')}
-                    >
-                      <img src={img} className="w-full h-full object-cover" alt={`Gallery ${i}`} />
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Main Article Content with Galleries interspersed */}
+            <div ref={articleRef}>
+              <div 
+                className="prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300 whitespace-pre-line text-justify mb-12 article-content"
+                dangerouslySetInnerHTML={{ __html: contentParts[0] }}
+              />
 
-            <div 
-              ref={articleRef} 
-              className="prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300 whitespace-pre-line text-justify mb-20 article-content"
-              dangerouslySetInnerHTML={{ 
-                __html: (article.content || "")
-                  .replace(/\n/g, '<br/>')
-                  .replace(/<img/g, '<img class="w-full rounded-3xl my-8 shadow-xl border border-taa-primary/5"')
-              }}
-            />
+              {/* Story Gallery - Moved to first interval */}
+              {storyGalleryImages.length > 0 && (
+                <div className="my-16 py-12 border-y border-taa-primary/10">
+                  <h3 className="text-xl font-black text-taa-dark dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                    <Sparkles size={18} className="text-taa-primary" /> Story Delegates
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {storyGalleryImages.map((img, i) => (
+                      <motion.div 
+                        key={i}
+                        whileHover={{ scale: 1.02 }}
+                        className="aspect-square rounded-2xl overflow-hidden border border-taa-primary/10 shadow-md cursor-pointer"
+                        onClick={() => window.open(img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img, '_blank')}
+                      >
+                        <img src={img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img} className="w-full h-full object-cover" alt={`Gallery ${i}`} />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {contentParts[1] && (
+                <div 
+                  className="prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300 whitespace-pre-line text-justify mb-12 article-content"
+                  dangerouslySetInnerHTML={{ __html: contentParts[1] }}
+                />
+              )}
+
+              {/* Story Delegates Gallery - Moved to second interval */}
+              {storyDelegatesImages.length > 0 && (
+                <div className="my-16 py-12 border-y border-taa-primary/10">
+                  <h3 className="text-xl font-black text-taa-dark dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                    <Sparkles size={18} className="text-taa-primary" /> Story Delegates
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {storyDelegatesImages.map((img, i) => (
+                      <motion.div 
+                        key={i}
+                        whileHover={{ scale: 1.02 }}
+                        className="aspect-square rounded-2xl overflow-hidden border border-taa-primary/10 shadow-md cursor-pointer"
+                        onClick={() => window.open(img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img, '_blank')}
+                      >
+                        <img src={img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img} className="w-full h-full object-cover" alt={`Delegate ${i}`} />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {contentParts[2] && (
+                <div 
+                  className="prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300 whitespace-pre-line text-justify mb-20 article-content"
+                  dangerouslySetInnerHTML={{ __html: contentParts[2] }}
+                />
+              )}
+            </div>
 
             {article.sourceUrl && (
               <div className="mb-20 pt-10 border-t border-taa-primary/5">
@@ -381,7 +459,7 @@ export default function ArticleDetails() {
             )}
 
             {/* Re-designed Sharing Section */}
-            <div className="bg-taa-primary/5 dark:bg-white/5 rounded-[2rem] p-10 border border-taa-primary/10 relative overflow-hidden">
+            {/* <div className="bg-taa-primary/5 dark:bg-white/5 rounded-[2rem] p-10 border border-taa-primary/10 relative overflow-hidden">
                <div className="absolute top-0 right-0 w-32 h-32 bg-taa-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                <div className="relative z-10">
                 <h4 className="text-2xl font-black text-taa-dark dark:text-white mb-2">Did you find this insightful?</h4>
@@ -404,7 +482,7 @@ export default function ArticleDetails() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </article>
 
@@ -423,7 +501,7 @@ export default function ArticleDetails() {
                   className="glass-card group p-6 rounded-[2rem] border border-taa-primary/5 hover:border-taa-primary/20 transition-all"
                 >
                   <div className="aspect-video rounded-2xl overflow-hidden mb-6">
-                    <img src={rel.image || rel.images?.[0]} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={rel.title} />
+                    <img src={(rel.image || rel.images?.[0])?.startsWith('/uploads/') ? `${BACKEND_URL}${rel.image || rel.images?.[0]}` : (rel.image || rel.images?.[0])} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={rel.title} />
                   </div>
                   <h4 className="font-black text-xl text-taa-dark dark:text-white line-clamp-2 group-hover:text-taa-primary transition-colors">{rel.title}</h4>
                 </Link>

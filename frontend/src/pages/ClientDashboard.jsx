@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import API from "../utils/api";
+import API, { BACKEND_URL } from "../utils/api";
 import { 
   User, 
   BookOpen, 
@@ -149,7 +149,7 @@ export default function ClientDashboard() {
                     <div className="glass-card group h-full rounded-[2rem] overflow-hidden flex flex-col border-taa-primary/5 hover:border-taa-primary/20 transition-all duration-500 hover:-translate-y-2">
                       <div className="relative aspect-video overflow-hidden">
                         <img 
-                          src={article.image || "https://via.placeholder.com/600x400"} 
+                          src={(article.image || article.images?.[0])?.startsWith('/uploads/') ? `${BACKEND_URL}${article.image || article.images?.[0]}` : (article.image || article.images?.[0]) || "https://via.placeholder.com/600x400"} 
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                           alt={article.title}
                         />
@@ -183,7 +183,7 @@ export default function ClientDashboard() {
                     <div className="glass-card group flex flex-col sm:flex-row rounded-3xl overflow-hidden border-taa-primary/5 hover:border-taa-primary/20 transition-all">
                       <div className="sm:w-64 h-48 sm:h-auto overflow-hidden">
                         <img 
-                          src={article.image || "https://via.placeholder.com/400x300"} 
+                          src={(article.image || article.images?.[0])?.startsWith('/uploads/') ? `${BACKEND_URL}${article.image || article.images?.[0]}` : (article.image || article.images?.[0]) || "https://via.placeholder.com/400x300"} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                           alt={article.title}
                         />

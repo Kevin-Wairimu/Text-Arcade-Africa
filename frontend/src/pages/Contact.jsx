@@ -77,7 +77,7 @@ export default function Contact() {
       </section>
 
       <section className="max-w-7xl mx-auto px-6 py-20 pb-40">
-        <div className="grid lg:grid-cols-2 gap-20">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-20">
           {/* Info */}
           <div className="space-y-12">
             <h2 className="text-3xl font-black text-taa-dark dark:text-white tracking-tight">Contact Information</h2>

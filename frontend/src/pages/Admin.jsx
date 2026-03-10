@@ -77,6 +77,7 @@ export default function Admin() {
   });
   const [editingUser, setEditingUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const contentRef = React.useRef(null);
 
   const [menuOpen, setMenuOpen] = useState(
     () => localStorage.getItem("adminMenuOpen") || "dashboard"
@@ -244,19 +245,29 @@ export default function Admin() {
   const handleMultiImageUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+    setIsSubmitting(true);
     try {
       const newImages = await Promise.all(
         files.map(async (file) => {
           const compressed = await imageCompression(file, { maxSizeMB: 0.8, maxWidthOrHeight: 1200 });
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(compressed);
+          const formData = new FormData();
+          formData.append("file", compressed, file.name);
+          const response = await API.post("/upload", formData, {
+            headers: { 
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data" 
+            }
           });
+          return response.data.url; // e.g. "/uploads/123-filename.jpg"
         })
       );
       setArticleForm(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
-    } catch (err) { alert("Upload failed"); }
+    } catch (err) { 
+      console.error("Upload failed:", err);
+      alert("Upload failed"); 
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const removeImage = (index) => {
@@ -302,6 +313,32 @@ export default function Admin() {
   const toggleSuspension = async (user) => {
     await apiCall("put", `/users/${user._id}/suspend`, { suspended: !user.suspended }, "users");
     await fetchUsers();
+  };
+
+  const insertImageAtCursor = (imgUrl) => {
+    const textarea = contentRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = articleForm.content;
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
+    
+    // Use relative path if it's an upload, otherwise use as is
+    const imageTag = `\n<img src="${imgUrl}" />\n`;
+    
+    setArticleForm({
+      ...articleForm,
+      content: before + imageTag + after
+    });
+
+    // Reset focus and cursor (after state update)
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = start + imageTag.length;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 0);
   };
 
   const navItems = [
@@ -495,17 +532,25 @@ export default function Admin() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-black text-gray-400 uppercase ml-2">Body Content</label>
-                      <textarea rows="10" className="w-full bg-taa-surface dark:bg-taa-dark/50 border-2 border-transparent focus:border-taa-primary rounded-2xl p-6 outline-none font-medium text-taa-dark dark:text-white leading-relaxed shadow-inner" value={articleForm.content} onChange={(e) => setArticleForm({...articleForm, content: e.target.value})} required />
+                      <textarea 
+                        ref={contentRef}
+                        rows="10" 
+                        className="w-full bg-taa-surface dark:bg-taa-dark/50 border-2 border-transparent focus:border-taa-primary rounded-2xl p-6 outline-none font-medium text-taa-dark dark:text-white leading-relaxed shadow-inner" 
+                        value={articleForm.content} 
+                        onChange={(e) => setArticleForm({...articleForm, content: e.target.value})} 
+                        required 
+                      />
                     </div>
                     <div className="space-y-4">
-                      <label className="text-xs font-black text-gray-400 uppercase ml-2">Media Library</label>
+                      <label className="text-xs font-black text-gray-400 uppercase ml-2">Media Library <span className="lowercase font-normal opacity-60">(Click + to insert into text)</span></label>
                       <div className="flex flex-wrap gap-4">
                         {articleForm.images.map((img, i) => (
                           <div key={i} className="relative w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden group border-2 border-taa-primary/10 shadow-lg">
-                            <img src={img} className="w-full h-full object-cover" alt="story" />
+                            <img src={img.startsWith('data:') ? img : `${BACKEND_URL}${img}`} className="w-full h-full object-cover" alt="story" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                                 <button type="button" onClick={() => removeImage(i)} className="p-1.5 bg-red-500 text-white rounded-full"><X size={12} /></button>
-                                <button type="button" onClick={() => { navigator.clipboard.writeText(`<img src="${img}" />`); alert("Inline image code copied! Paste it anywhere in the article body content."); }} className="p-1.5 bg-taa-accent text-white rounded-full" title="Copy for Inline Use"><ImageIcon size={12} /></button>
+                                <button type="button" onClick={() => insertImageAtCursor(img)} className="p-1.5 bg-taa-primary text-white rounded-full" title="Insert into text"><Plus size={12} /></button>
+                                <button type="button" onClick={() => { navigator.clipboard.writeText(`<img src="${img}" />`); alert("Inline image code copied! Paste it anywhere in the article body content."); }} className="p-1.5 bg-taa-accent text-white rounded-full" title="Copy for Manual Use"><ImageIcon size={12} /></button>
                             </div>
                             {i === 0 && <span className="absolute bottom-0 left-0 right-0 bg-taa-primary text-white text-[8px] font-black text-center py-1 uppercase">Cover</span>}
                           </div>
@@ -559,7 +604,7 @@ export default function Admin() {
                   {articles.map((art, i) => (
                     <div key={art._id || i} className="glass-card rounded-3xl overflow-hidden flex flex-col group border-taa-primary/5 shadow-lg">
                       <div className="h-40 relative overflow-hidden">
-                        <img src={art.images?.[0] || art.image || "https://via.placeholder.com/400x200"} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={art.title} />
+                        <img src={(art.images?.[0] || art.image)?.startsWith('/uploads/') ? `${BACKEND_URL}${art.images?.[0] || art.image}` : (art.images?.[0] || art.image) || "https://via.placeholder.com/400x200"} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={art.title} />
                         <div className="absolute top-3 left-3"><span className="px-2 py-1 bg-taa-primary text-white text-[8px] font-black uppercase rounded-full">{art.category}</span></div>
                       </div>
                       <div className="p-5 flex-1 flex flex-col">
