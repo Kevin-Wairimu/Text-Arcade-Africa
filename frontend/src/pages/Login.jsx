@@ -3,24 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import API from "../utils/api";
 import { useAlert } from "../context/AlertContext";
-
-// --- SVG Icon for the "Back to Home" button ---
-const HomeIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-    <polyline points="9 22 9 12 15 12 15 22"></polyline>
-  </svg>
-);
+import { Home, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -32,118 +15,119 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  try {
-    // CALL CORRECT ENDPOINT
-    const { data } = await API.post("/auth/login", form);
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { data } = await API.post("/auth/login", form);
 
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("userName", data.user.name);
-    localStorage.setItem("userEmail", data.user.email);
-    localStorage.setItem("role", data.user.role);
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("userName", data.user.name);
+      localStorage.setItem("userEmail", data.user.email);
+      localStorage.setItem("role", data.user.role);
 
-    showAlert("Welcome back!", "success");
+      showAlert("Welcome back!", "success");
 
-    setTimeout(() => {
-      if (data.user.role === "Client") {
-        navigate("/client");
-      } else if (data.user.role === "Admin") {
-        navigate("/admin");
-      } else {
-        navigate("/");
-      }
-    }, 400);
-  } catch (err) {
-    const msg = err.response?.data?.message || "Login failed";
-    console.error("Login error:", err.response?.data);
-    showAlert(msg, "error");
-    setLoading(false);
-  }
-};
+      setTimeout(() => {
+        if (data.user.role === "Client") {
+          navigate("/client");
+        } else if (data.user.role === "Admin" || data.user.role === "Employee") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
+      }, 400);
+    } catch (err) {
+      const msg = err.response?.data?.message || "Login failed";
+      showAlert(msg, "error");
+      setLoading(false);
+    }
+  };
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-emerald-50 to-white p-4">
-      {/* --- "Back to Home" Button --- */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
+    <main className="min-h-screen flex items-center justify-center bg-taa-surface dark:bg-taa-dark p-6 transition-colors duration-300 relative overflow-hidden">
+      {/* Background blobs */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-taa-primary/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-taa-accent/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+
+      <Link
+        to="/"
+        className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold text-taa-primary dark:text-taa-accent hover:opacity-70 transition-all z-20"
       >
-        <Link
-          to="/"
-          className="absolute top-5 right-5 flex items-center gap-2 text-sm font-medium text-taa-primary bg-white/60 backdrop-blur-md py-2 px-4 rounded-full border border-white/30 hover:bg-white/90 transition"
-        >
-          <HomeIcon />
-          <span>Back to Home</span>
-        </Link>
-      </motion.div>
+        <Home size={18} />
+        <span>Back to Home</span>
+      </Link>
 
-      {/* --- Login Card --- */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative bg-white/40 backdrop-blur-2xl p-8 sm:p-10 rounded-2xl shadow-lg w-full max-w-md border border-white/40 overflow-hidden"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md z-10"
       >
-        {/* Glass glow overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-taa-primary/10 via-taa-accent/10 to-transparent rounded-2xl pointer-events-none" />
+        <div className="glass-card p-8 md:p-10 rounded-[2.5rem] shadow-2xl border-taa-primary/5">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-taa-primary text-white mb-6 shadow-lg shadow-taa-primary/20">
+              <Lock size={32} />
+            </div>
+            <h1 className="text-3xl font-black text-taa-dark dark:text-white tracking-tight">
+              Sign In
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-2 font-medium">
+              Access your Text Africa Arcade dashboard
+            </p>
+          </div>
 
-        <h1 className="text-3xl font-bold text-center text-taa-dark mb-2 relative z-10">
-          Welcome Back
-        </h1>
-        <p className="text-center text-taa-dark/70 mb-8 relative z-10">
-          Login to continue your journey at Text Africa Arcade.
-        </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative group">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-taa-primary transition-colors" size={20} />
+              <input
+                type="email"
+                placeholder="Email address"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white dark:bg-taa-dark/50 border-2 border-transparent focus:border-taa-primary outline-none transition-all dark:text-white"
+              />
+            </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-5 text-left relative z-10"
-        >
-          <input
-            type="email"
-            placeholder="Email address"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-            className="w-full p-3 rounded-lg bg-emerald-50/30 text-taa-dark placeholder-taa-dark/50 border border-white/20 backdrop-blur-sm focus:bg-white/40 focus:ring-2 focus:ring-taa-accent focus:outline-none transition"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-            className="w-full p-3 rounded-lg bg-emerald-50/30 text-taa-dark placeholder-taa-dark/50 border border-white/20 backdrop-blur-sm focus:bg-white/40 focus:ring-2 focus:ring-taa-accent focus:outline-none transition"
-          />
+            <div className="relative group">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-taa-primary transition-colors" size={20} />
+              <input
+                type="password"
+                placeholder="Password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white dark:bg-taa-dark/50 border-2 border-transparent focus:border-taa-primary outline-none transition-all dark:text-white"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-taa-primary hover:bg-taa-accent text-white py-3 rounded-lg font-medium shadow-md hover:shadow-lg transition disabled:bg-taa-primary/50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+            <div className="text-right">
+              <Link
+                to="/forgot-password"
+                className="text-sm font-bold text-taa-primary dark:text-taa-accent hover:underline"
+              >
+                Forgot Password?
+              </Link>
+            </div>
 
-        <div className="mt-6 text-center text-sm text-gray-600 relative z-10">
-          <Link
-            to="/forgot-password"
-            className="text-taa-accent hover:underline font-medium"
-          >
-            Forgot password?
-          </Link>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-taa-primary text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 hover:brightness-110 shadow-xl shadow-taa-primary/20 transition-all disabled:opacity-50 active:scale-95"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : <>Login <ArrowRight size={20} /></>}
+            </button>
+          </form>
+
+          <div className="mt-10 text-center text-sm font-medium text-gray-500">
+            Don't have an account?{" "}
+            <Link
+              to="/register"
+              className="text-taa-primary dark:text-taa-accent font-bold hover:underline"
+            >
+              Create one now
+            </Link>
+          </div>
         </div>
-
-        <p className="mt-4 text-sm text-center text-gray-600 relative z-10">
-          Don’t have an account?{" "}
-          <Link
-            to="/register"
-            className="text-taa-accent hover:underline font-medium"
-          >
-            Create one
-          </Link>
-        </p>
       </motion.div>
     </main>
   );

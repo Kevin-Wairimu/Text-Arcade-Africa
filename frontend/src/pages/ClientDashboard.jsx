@@ -1,7 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import API from "../utils/api";
+import { 
+  User, 
+  BookOpen, 
+  TrendingUp, 
+  ArrowRight, 
+  Clock, 
+  ChevronRight,
+  Search,
+  LayoutGrid,
+  List as ListIcon,
+  Sparkles
+} from "lucide-react";
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -9,22 +21,27 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [viewMode, setViewMode] = useState("grid");
 
   const name = localStorage.getItem("userName") || "Valued Client";
 
   const categories = [
-    "All",
-    "Media Review",
-    "Expert Insights",
-    "Reflections",
-    "Technology",
-    "Events",
-    "Digest",
-    "Innovation",
-    // "Expert View",
-    "Trends",
-    "General",
+    "All", "Media Review", "Expert Insights", "Reflections", 
+    "Technology", "Events", "Digest", "Innovation", "Trends", "General",
   ];
+
+  const fetchArticles = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { data } = await API.get("/articles");
+      setArticles(Array.isArray(data.articles) ? data.articles : []);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load your feed.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -34,232 +51,173 @@ export default function ClientDashboard() {
     } else {
       fetchArticles();
     }
-  }, [navigate]);
+  }, [navigate, fetchArticles]);
 
-  async function fetchArticles() {
-    try {
-      setLoading(true);
-      setError(null);
-      const { data } = await API.get("/articles");
-      const validArticles = (Array.isArray(data.articles) ? data.articles : []).filter(
-        (a) => a && a._id && a.title
-      );
-      setArticles(validArticles);
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || "Failed to load articles.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const filteredArticles = selectedCategory === "All"
+    ? articles
+    : articles.filter(a => a.category?.toLowerCase() === selectedCategory.toLowerCase());
 
-  const filteredArticles =
-    selectedCategory === "All"
-      ? articles
-      : articles.filter(
-          (a) =>
-            a.category?.toLowerCase() === selectedCategory.toLowerCase()
-        );
-
-  const featuredArticles = filteredArticles.slice(0, 3);
-  const recentArticles = filteredArticles.slice(3, 9);
-
-  // --- Loading / Error States ---
-  if (loading || error) {
+  if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-[#2E7D32] via-[#1B5E20] to-[#2E7D32] flex items-center justify-center px-4">
-        <div className="text-center">
-          {loading ? (
-            <>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-16 h-16 border-4 border-white/30 border-t-[#E8F5E9] rounded-full mx-auto mb-4"
-              />
-              <p className="text-white text-xl font-medium">
-                Loading your dashboard...
-              </p>
-            </>
-          ) : (
-            <div className="max-w-md bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 shadow-lg">
-              <h2 className="text-2xl font-bold text-white mb-4">
-                Oops! Something went wrong
-              </h2>
-              <p className="text-gray-200 mb-6">{error}</p>
-              <div className="flex gap-4 justify-center">
-                <button
-                  onClick={() => window.location.reload()}
-                  className="bg-[#81C784] text-[#1B5E20] px-6 py-3 rounded-lg font-semibold hover:bg-[#A5D6A7] transition shadow-md"
-                >
-                  Retry
-                </button>
-                <Link
-                  to="/login"
-                  className="border border-white/30 text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition"
-                >
-                  Log In Again
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
+      <div className="min-h-screen bg-taa-surface dark:bg-taa-dark flex flex-col items-center justify-center p-6">
+        <div className="w-16 h-16 border-4 border-taa-primary/20 border-t-taa-primary rounded-full animate-spin mb-6"></div>
+        <p className="text-xl font-black text-taa-primary animate-pulse tracking-tight">PREPARING YOUR FEED...</p>
+      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#E8F5E9] via-white to-[#E8F5E9] pt-24 md:pt-32 text-[#2E7D32]">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl md:text-5xl font-extrabold text-[#2E7D32] mb-4 drop-shadow-sm">
-            Welcome back, {name}! 👋
-          </h1>
-          <p className="text-lg text-[#33691E]/80 max-w-3xl mx-auto">
-            Stay informed with insights from across Africa. Explore updates on
-            digital storytelling, innovation, and transformation.
-          </p>
-        </motion.section>
+    <div className="min-h-screen bg-taa-surface dark:bg-taa-dark transition-colors duration-300 pb-20">
+      {/* Dynamic Header */}
+      <div className="relative pt-32 pb-20 px-6 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full bg-taa-primary opacity-[0.03] dark:opacity-[0.05] pointer-events-none" />
+        <div className="max-w-7xl mx-auto relative z-10">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col md:flex-row md:items-end justify-between gap-8"
+          >
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-taa-primary/10 text-taa-primary rounded-full text-xs font-black uppercase tracking-widest mb-6">
+                <Sparkles size={14} /> Personalized Feed
+              </div>
+              <h1 className="text-4xl md:text-6xl font-black text-taa-dark dark:text-white tracking-tighter leading-tight">
+                Welcome back, <span className="text-taa-primary">{name.split(' ')[0]}</span>
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400 font-medium mt-4 max-w-2xl text-lg">
+                Your curated selection of digital transformation insights from across the continent.
+              </p>
+            </div>
+            
+            <div className="flex bg-white dark:bg-taa-dark/50 p-2 rounded-2xl shadow-xl border border-taa-primary/5">
+              <button 
+                onClick={() => setViewMode("grid")}
+                className={`p-3 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-taa-primary text-white shadow-lg' : 'text-gray-400 hover:text-taa-primary'}`}
+              >
+                <LayoutGrid size={20} />
+              </button>
+              <button 
+                onClick={() => setViewMode("list")}
+                className={`p-3 rounded-xl transition-all ${viewMode === 'list' ? 'bg-taa-primary text-white shadow-lg' : 'text-gray-400 hover:text-taa-primary'}`}
+              >
+                <ListIcon size={20} />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
 
-        {/* Category Filter */}
-        <section className="mb-10">
-          <div className="flex flex-wrap gap-2 justify-center">
+      <main className="max-w-7xl mx-auto px-6">
+        {/* Navigation & Filters */}
+        <section className="mb-12 sticky top-24 z-30 py-4 bg-taa-surface/80 dark:bg-taa-dark/80 backdrop-blur-md">
+          <div className="flex flex-wrap gap-3 items-center">
             {categories.map((cat) => (
-              <motion.button
+              <button
                 key={cat}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                className={`px-6 py-2.5 rounded-full text-sm font-black transition-all duration-300 ${
                   selectedCategory === cat
-                    ? "bg-[#2E7D32] text-white shadow-md"
-                    : "bg-[#E8F5E9] text-[#2E7D32] hover:bg-[#C8E6C9]"
+                    ? "bg-taa-primary text-white shadow-xl scale-105"
+                    : "bg-white dark:bg-white/5 text-taa-dark dark:text-white/70 hover:bg-taa-primary/10 shadow-md"
                 }`}
               >
                 {cat}
-              </motion.button>
+              </button>
             ))}
           </div>
         </section>
 
-        {/* Featured Articles */}
-        {featuredArticles.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-12"
-          >
-            <h2 className="text-3xl font-bold text-[#1B5E20] mb-6">
-              Featured Stories
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              {featuredArticles.map((article) => (
-                <motion.article
-                  key={article._id}
-                  whileHover={{ y: -5 }}
-                  className="bg-white rounded-2xl overflow-hidden border border-[#A5D6A7] hover:border-[#2E7D32] transition-all shadow-lg"
-                >
-                  {article.image && (
-                    <img
-                      src={article.image}
-                      alt={article.title}
-                      className="w-full h-48 object-cover"
-                    />
-                  )}
-                  <div className="p-6">
-                    <span className="inline-block bg-[#E8F5E9] text-[#2E7D32] text-xs px-2 py-1 rounded-full mb-3 font-medium">
-                      {article.category || "General"}
-                    </span>
-                    <h3 className="text-lg font-semibold text-[#1B5E20] mb-2 line-clamp-2">
-                      {article.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-                      {article.content?.substring(0, 120)}...
-                    </p>
-                    <Link
-                      to={`/article/${article._id}`}
-                      className="font-semibold text-[#2E7D32] hover:underline"
-                    >
-                      Read More →
-                    </Link>
-                  </div>
-                </motion.article>
-              ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* Recent Articles */}
-        {recentArticles.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <h2 className="text-3xl font-bold text-[#1B5E20] mb-6">
-              Recent Updates
-            </h2>
-            <div className="space-y-4">
-              {recentArticles.map((article) => (
+        {error ? (
+          <div className="glass-card p-12 rounded-[2.5rem] border-red-500/20 text-center">
+            <h2 className="text-2xl font-black text-red-500 mb-4">Something went wrong</h2>
+            <p className="text-gray-500 mb-8">{error}</p>
+            <button onClick={fetchArticles} className="btn-primary">Try Again</button>
+          </div>
+        ) : filteredArticles.length > 0 ? (
+          <div className={viewMode === 'grid' ? "grid md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-6"}>
+            <AnimatePresence mode="popLayout">
+              {filteredArticles.map((article, i) => (
                 <motion.div
+                  layout
                   key={article._id}
-                  whileHover={{ x: 5 }}
-                  className="flex gap-4 p-4 bg-white rounded-2xl border border-[#A5D6A7] hover:border-[#2E7D32] transition-all"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ delay: i * 0.05 }}
                 >
-                  {article.image && (
-                    <img
-                      src={article.image}
-                      alt={article.title}
-                      className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
-                    />
+                  {viewMode === 'grid' ? (
+                    <div className="glass-card group h-full rounded-[2rem] overflow-hidden flex flex-col border-taa-primary/5 hover:border-taa-primary/20 transition-all duration-500 hover:-translate-y-2">
+                      <div className="relative aspect-video overflow-hidden">
+                        <img 
+                          src={article.image || "https://via.placeholder.com/600x400"} 
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                          alt={article.title}
+                        />
+                        <div className="absolute top-4 left-4">
+                          <span className="px-3 py-1 bg-taa-primary text-white text-[10px] font-black uppercase tracking-widest rounded-full">
+                            {article.category}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-8 flex flex-col flex-1">
+                        <div className="flex items-center gap-2 text-xs font-bold text-taa-primary mb-4 uppercase tracking-widest">
+                          <Clock size={14} />
+                          {new Date(article.publishedAt || article.createdAt).toLocaleDateString()}
+                        </div>
+                        <h3 className="text-xl font-black text-taa-dark dark:text-white mb-4 line-clamp-2 leading-tight group-hover:text-taa-primary transition-colors">
+                          {article.title}
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium line-clamp-3 mb-8 flex-1">
+                          {article.content?.replace(/<[^>]*>/g, '').substring(0, 150)}...
+                        </p>
+                        <Link 
+                          to={`/article/${article._id}`}
+                          className="inline-flex items-center gap-2 text-taa-primary font-black text-sm group/btn"
+                        >
+                          EXPLORE STORY 
+                          <ChevronRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="glass-card group flex flex-col sm:flex-row rounded-3xl overflow-hidden border-taa-primary/5 hover:border-taa-primary/20 transition-all">
+                      <div className="sm:w-64 h-48 sm:h-auto overflow-hidden">
+                        <img 
+                          src={article.image || "https://via.placeholder.com/400x300"} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                          alt={article.title}
+                        />
+                      </div>
+                      <div className="p-8 flex-1 flex flex-col justify-center">
+                        <span className="text-[10px] font-black uppercase text-taa-primary mb-2 tracking-widest">{article.category}</span>
+                        <h3 className="text-2xl font-black text-taa-dark dark:text-white mb-2 group-hover:text-taa-primary transition-colors">{article.title}</h3>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium line-clamp-2 mb-4">
+                          {article.content?.replace(/<[^>]*>/g, '').substring(0, 200)}...
+                        </p>
+                        <Link to={`/article/${article._id}`} className="font-black text-taa-primary text-sm flex items-center gap-1">
+                          READ ARTICLE <ArrowRight size={16} />
+                        </Link>
+                      </div>
+                    </div>
                   )}
-                  <div className="flex-1">
-                    <span className="bg-[#E8F5E9] text-[#2E7D32] text-xs px-2 py-1 rounded-full font-medium mb-2 inline-block">
-                      {article.category || "General"}
-                    </span>
-                    <h3 className="text-base font-semibold text-[#1B5E20] mb-1 line-clamp-1">
-                      {article.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm line-clamp-2 mb-2">
-                      {article.content?.substring(0, 100)}...
-                    </p>
-                    <Link
-                      to={`/article/${article._id}`}
-                      className="text-[#2E7D32] text-sm font-semibold hover:underline"
-                    >
-                      Read full story →
-                    </Link>
-                  </div>
                 </motion.div>
               ))}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <div className="text-center py-40">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-taa-primary/5 text-taa-primary mb-8">
+              <BookOpen size={40} />
             </div>
-          </motion.section>
-        )}
-
-        {/* Empty State */}
-        {filteredArticles.length === 0 && (
-          <motion.section
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-20"
-          >
-            <h2 className="text-2xl font-bold text-[#1B5E20] mb-4">
-              No articles found in this category
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Try selecting another category or check back later for new content.
-            </p>
-            <Link
-              to="/services"
-              className="bg-[#2E7D32] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#81C784] transition shadow-md"
+            <h2 className="text-3xl font-black text-taa-dark dark:text-white mb-4 tracking-tight">The Feed is Quiet</h2>
+            <p className="text-gray-500 font-medium mb-10 max-w-md mx-auto">No articles match your current selection. Explore other categories or check back soon for fresh insights.</p>
+            <button 
+              onClick={() => setSelectedCategory("All")}
+              className="btn-primary"
             >
-              Explore Our Services
-            </Link>
-          </motion.section>
+              Reset Filters
+            </button>
+          </div>
         )}
       </main>
     </div>

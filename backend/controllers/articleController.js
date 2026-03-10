@@ -8,7 +8,17 @@ exports.getArticleBySlug = async (req, res) => {
     const { slug } = req.params;
     if (!slug) return res.status(400).json({ message: "Slug is required" });
 
-    const article = await Article.findOne({ slug });
+    const query = { slug };
+
+    // Increment views if not Admin
+    if (req.method === 'GET' && (!req.user || req.user.role !== 'Admin')) {
+      await Article.updateOne(query, { $inc: { views: 1 } });
+      if (req.io) {
+        req.io.emit("viewsUpdated", { slug });
+      }
+    }
+
+    const article = await Article.findOne(query).lean();
     if (!article) return res.status(404).json({ message: "Article not found" });
 
     res.status(200).json({ article });
@@ -33,14 +43,21 @@ exports.getAllArticles = async (req, res) => {
     }
 
     const articles = await Article.find(filter)
+      .select("title image category views publishedAt slug author content")
       .sort({ publishedAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
+    // Map articles to truncate content for the list view to reduce payload size
+    const optimizedArticles = articles.map(article => ({
+      ...article,
+      content: article.content ? article.content.substring(0, 200) : ""
+    }));
+
     const total = await Article.countDocuments(filter);
 
-    res.json({ articles, total, page, limit, hasMore: page * limit < total });
+    res.json({ articles: optimizedArticles, total, page, limit, hasMore: page * limit < total });
   } catch (err) {
     console.error("Error fetching articles:", err);
     res.status(500).json({ error: "Failed to fetch articles", details: err.message });
@@ -56,12 +73,18 @@ exports.getArticleById = async (req, res) => {
     const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
 
     // --- FIX APPLIED HERE ---
-    // Step 1: Only increment the view count if the request method is 'GET'.
-    // This prevents the browser's 'OPTIONS' pre-flight request from being counted.
-    if (req.method === 'GET') {
+    // Step 1: Only increment the view count if:
+    // - The request method is 'GET'
+    // - The user is NOT an Admin
+    if (req.method === 'GET' && (!req.user || req.user.role !== 'Admin')) {
       // We use .updateOne() here because we don't need the document returned from
       // this specific operation. This is a "fire-and-forget" update.
       await Article.updateOne(query, { $inc: { views: 1 } });
+      
+      // Notify Admin via Socket.IO
+      if (req.io) {
+        req.io.emit("viewsUpdated", { idOrSlug: id });
+      }
     }
 
     // Step 2: Now, fetch the article with the updated view count.
@@ -84,11 +107,14 @@ exports.getArticleById = async (req, res) => {
 // --- CREATE article ---
 exports.createArticle = async (req, res) => {
   try {
+    const images = req.body.images || [];
     const article = new Article({
       ...req.body,
+      image: images.length > 0 ? images[0] : req.body.image, // Fallback to body.image if provided
       slug: slugify(req.body.title || "article", { lower: true, strict: true }),
       publishedAt: req.body.publishedAt || new Date(),
       views: req.body.views || 0,
+      videoUrl: req.body.videoUrl || "",
     });
     await article.save();
     res.status(201).json(article);
@@ -102,6 +128,11 @@ exports.createArticle = async (req, res) => {
 exports.updateArticle = async (req, res) => {
   try {
     if (req.body.title) req.body.slug = slugify(req.body.title, { lower: true, strict: true });
+    
+    // Sync main image if images array is provided
+    if (req.body.images && req.body.images.length > 0) {
+      req.body.image = req.body.images[0];
+    }
 
     const article = await Article.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true, lean: true });
     if (!article) return res.status(404).json({ error: "Article not found" });

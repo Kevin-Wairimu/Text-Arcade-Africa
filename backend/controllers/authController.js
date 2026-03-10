@@ -184,19 +184,10 @@ exports.forgotPassword = async (req, res) => {
     }
     console.log("SERVER: HASHED token has been successfully saved to DB.");
 
-    const resetURL = `http://localhost:5173/reset-password/${resetToken}`;
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
+    const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
+    const resetURL = `${frontendURL}/reset-password/${resetToken}`;
+    
     const mailOptions = {
-      from: `"Text Africa Arcade" <${process.env.EMAIL_USER}>`,
       to: user.email,
       subject: "Your Password Reset Link",
       html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.6; border: 1px solid #ddd; border-radius: 8px; max-width: 600px; margin: auto;">
@@ -216,7 +207,8 @@ exports.forgotPassword = async (req, res) => {
     };
 
     console.log("SERVER: Attempting to send email...");
-    await transporter.sendMail(mailOptions);
+    const { sendEmail } = require("../utils/email");
+    await sendEmail(mailOptions);
     console.log("SERVER: Password reset email sent successfully.");
 
     res
@@ -224,7 +216,7 @@ exports.forgotPassword = async (req, res) => {
       .json({ message: "A password reset link has been sent to your email." });
   } catch (err) {
     console.error("SERVER CRITICAL ERROR during forgot password:", err);
-    res.status(500).send("Server error");
+    res.status(500).json({ message: "Failed to send reset link. Please try again later." });
   }
 };
 

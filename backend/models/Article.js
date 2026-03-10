@@ -6,7 +6,8 @@ const ArticleSchema = new mongoose.Schema(
     title: { type: String, required: true },
     content: { type: String, required: true },
     author: { type: String, default: "Text Africa Arcade" },
-    image: { type: String }, // base64 or URL
+    image: { type: String }, // Legacy support for single main image
+    images: [{ type: String }], // Array of base64 or URLs for multiple images
     category: {
       type: String,
       enum: [
@@ -27,17 +28,13 @@ const ArticleSchema = new mongoose.Schema(
     featured: { type: Boolean, default: false },
     publishedAt: { type: Date, default: Date.now },
     views: { type: Number, default: 0 },
-
-    // Generated slug
+    videoUrl: { type: String }, // URL to hosted video or uploaded file path
     slug: { type: String, unique: true, index: true },
-
-    // Optional external link
     sourceUrl: { type: String, trim: true },
   },
   { timestamps: true }
 );
 
-// Auto-generate slug before saving
 ArticleSchema.pre("save", function (next) {
   if (!this.slug || this.isModified("title")) {
     this.slug = slugify(this.title, { lower: true, strict: true });

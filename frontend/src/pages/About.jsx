@@ -1,113 +1,141 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { Target, Zap, Shield, Globe, Award, Quote } from "lucide-react";
 
-// --- Custom SVG Icon Components (unchanged) ---
-const InnovationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.95m-8.95 8.95A5 5 0 0 1 9 15.05M8.95 23A9 9 0 0 1 1 15.05M2 7h6a2 2 0 0 1 2 2v6a2 2 0 0 0 2 2h6a2 2 0 0 1 2 2v0"/><path d="m22 2-2.5 2.5"/></svg>;
-const SustainabilityIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="M12 12a4 4 0 1 1 0 8 4 4 0 0 1 0-8z"/></svg>;
-const AudienceIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><path d="M12 20h4"/><path d="M12 4H8"/><path d="M20 12V8h-4"/><path d="M20 12l-4 4"/></svg>;
-
-// --- Core Principles ---
-const principles = [
-  { title: "Digital-First Innovation", desc: "Building capacity for news products to transition to pure digital platforms.", icon: <InnovationIcon /> },
-  { title: "Audience-Centric Growth", desc: "Focusing on audience advocacy and user needs to build loyal, engaged communities.", icon: <AudienceIcon /> },
-  { title: "Green Distribution", desc: "Supporting the production and distribution of content in environmentally friendly formats.", icon: <SustainabilityIcon /> },
-];
+const Principle = ({ icon: Icon, title, desc, delay }) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    transition={{ delay }}
+    viewport={{ once: true }}
+    className="glass-card p-8 rounded-[2rem] border-taa-primary/5 hover:border-taa-primary/20 transition-all group"
+  >
+    <div className="w-14 h-14 rounded-2xl bg-taa-primary/10 text-taa-primary flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-taa-primary group-hover:text-white transition-all">
+      <Icon size={28} />
+    </div>
+    <h3 className="text-xl font-black text-taa-dark dark:text-white mb-3 tracking-tight">{title}</h3>
+    <p className="text-gray-500 dark:text-gray-400 font-medium leading-relaxed">{desc}</p>
+  </motion.div>
+);
 
 export default function About() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-[#DDF3E2]/80 to-white pt-24 md:pt-32 text-gray-900">
-      <div className="max-w-6xl mx-auto px-6 py-16">
-
-        {/* --- Hero Section --- */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-20"
-        >
-          <h1 className="text-4xl md:text-5xl font-extrabold text-[#2E7D32] mb-6">
-            About Text Africa Arcade
-          </h1>
-          <p className="text-lg text-gray-700 leading-relaxed max-w-3xl mx-auto">
-            Text Africa Arcade (TAA) is a technology lab founded in 2025 to empower newsrooms and content producers across Africa, helping them innovate, adapt, and thrive in a digital-first world.
-          </p>
-        </motion.div>
-
-        {/* --- Mission & Objectives --- */}
-        <div className="grid md:grid-cols-2 gap-8 mt-16">
+    <div className="bg-taa-surface dark:bg-taa-dark transition-colors duration-300">
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+        <div className="max-w-7xl mx-auto text-center relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="bg-white/70 backdrop-blur-lg p-8 rounded-2xl shadow-xl border border-[#2E7D32]/30 transition-all duration-300 hover:border-[#2E7D32]/80 hover:shadow-[0_0_15px_rgba(46,125,50,0.3)]"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 bg-taa-primary/10 text-taa-primary rounded-full text-xs font-black uppercase tracking-widest mb-8"
           >
-            <h2 className="font-semibold text-2xl mb-4 text-[#2E7D32]">Our Mission</h2>
-            <p className="text-gray-800 leading-relaxed">
+             Our Story
+          </motion.div>
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-5xl md:text-8xl font-black text-taa-dark dark:text-white tracking-tighter leading-none mb-8"
+          >
+            Empowering the <br /> <span className="text-taa-primary">African Voice</span>
+          </motion.h1>
+          <motion.p 
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             transition={{ delay: 0.2 }}
+             className="text-xl md:text-2xl text-gray-500 dark:text-gray-400 max-w-3xl mx-auto font-medium leading-relaxed"
+          >
+            Text Africa Arcade (TAA) is a technology lab founded in 2025 to empower newsrooms and content producers across Africa, helping them innovate, adapt, and thrive in a digital-first world.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* Mission & Objectives */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <div className="grid md:grid-cols-2 gap-8">
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="glass-card p-10 rounded-[2.5rem] border-taa-primary/5 shadow-2xl"
+          >
+            <h2 className="text-3xl font-black text-taa-dark dark:text-white mb-6">Our Mission</h2>
+            <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
               To support content producers to innovate, adapt, and tell compelling stories from the digital frontlines.
             </p>
           </motion.div>
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-white/70 backdrop-blur-lg p-8 rounded-2xl shadow-xl border border-[#2E7D32]/30 transition-all duration-300 hover:border-[#2E7D32]/80 hover:shadow-[0_0_15px_rgba(46,125,50,0.3)]"
+            className="glass-card p-10 rounded-[2.5rem] border-taa-primary/5 shadow-2xl"
           >
-            <h2 className="font-semibold text-2xl mb-4 text-[#2E7D32]">Our Objectives</h2>
-            <p className="text-gray-800 leading-relaxed">
+            <h2 className="text-3xl font-black text-taa-dark dark:text-white mb-6">Our Objectives</h2>
+            <p className="text-lg text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
               We are dedicated to building the capacity of news content products to transition to digital platforms, grow audiences, and support the production of content in green and environmentally friendly formats.
             </p>
           </motion.div>
         </div>
+      </section>
 
-        {/* --- Founder Section --- */}
+      {/* Founder Section */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-16 bg-white/70 backdrop-blur-lg p-8 rounded-2xl shadow-xl border border-[#2E7D32]/30 transition-all duration-300 hover:border-[#2E7D32]/80 hover:shadow-[0_0_15px_rgba(46,125,50,0.3)]"
+          className="glass-card p-12 md:p-20 rounded-[3rem] border-taa-primary/5 bg-taa-primary text-white overflow-hidden relative"
         >
-          <h2 className="font-semibold text-2xl mb-4 text-[#2E7D32]">From the Founder</h2>
-          <p className="text-gray-800 leading-relaxed max-w-3xl italic">
-            "As Group Managing Editor at Mediamax, Kenya, I led a team that transitioned People Daily, Kenya’s first free newspaper, to be the country’s first digital-fully content product. I am a passionate driver of digital transformation, audience advocacy, and user needs. I believe in the power of the media as a force for good and I am concerned about the waning influence of legacy platforms. My vision is for TAA to be a leading partner in this transformation across Africa."
-          </p>
-        </motion.div>
-
-        {/* --- Core Principles --- */}
-        <div className="mt-20">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-3xl md:text-4xl font-bold text-center text-[#2E7D32] mb-12"
-          >
-            Our Core Principles
-          </motion.h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {principles.map((principle, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15, duration: 0.5, ease: "easeOut" }}
-                className="bg-white/70 backdrop-blur-lg p-8 rounded-2xl shadow-xl border border-[#2E7D32]/30 text-center transition-all duration-300 hover:-translate-y-2 hover:border-[#2E7D32]/80 hover:shadow-[0_0_15px_rgba(46,125,50,0.3)] group"
-              >
-                <div className="inline-block bg-[#2E7D32]/10 text-[#2E7D32] p-4 rounded-full mb-5 transition-all duration-300 group-hover:bg-[#2E7D32]/20 group-hover:scale-110">
-                  {principle.icon}
-                </div>
-                <h3 className="font-semibold text-xl text-[#1B5122] mb-3">{principle.title}</h3>
-                <p className="text-gray-800 text-sm leading-relaxed">{principle.desc}</p>
-              </motion.div>
-            ))}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
+          <div className="relative z-10">
+            <Quote size={64} className="mb-8 opacity-40" />
+            <h2 className="text-3xl md:text-5xl font-black tracking-tighter mb-10 leading-tight">
+              From the Founder
+            </h2>
+            <p className="text-xl md:text-3xl font-medium opacity-90 leading-relaxed italic mb-12">
+              "As Group Managing Editor at Mediamax, Kenya, I led a team that transitioned People Daily, Kenya’s first free newspaper, to be the country’s first digital-fully content product. I am a passionate driver of digital transformation, audience advocacy, and user needs. I believe in the power of the media as a force for good and I am concerned about the waning influence of legacy platforms. My vision is for TAA to be a leading partner in this transformation across Africa."
+            </p>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-2xl">E</div>
+              <div>
+                <p className="text-xl font-black tracking-tight">Emeka-Mayaka Gekara</p>
+                <p className="text-sm font-bold uppercase tracking-widest opacity-60">Text Africa Arcade</p>
+              </div>
+            </div>
           </div>
-        </div>
+        </motion.div>
+      </section>
 
-      </div>
-    </main>
+      {/* Core Principles */}
+      <section className="max-w-7xl mx-auto px-6 py-20 pb-40">
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-4xl md:text-6xl font-black text-center text-taa-dark dark:text-white tracking-tighter mb-16"
+        >
+          Our Core Principles
+        </motion.h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <Principle 
+            icon={Zap} 
+            title="Digital-First Innovation" 
+            desc="Building capacity for news products to transition to pure digital platforms." 
+            delay={0.1}
+          />
+          <Principle 
+            icon={Globe} 
+            title="Audience-Centric Growth" 
+            desc="Focusing on audience advocacy and user needs to build loyal, engaged communities." 
+            delay={0.2}
+          />
+          <Principle 
+            icon={Award} 
+            title="Green Distribution" 
+            desc="Supporting the production and distribution of content in environmentally friendly formats." 
+            delay={0.3}
+          />
+        </div>
+      </section>
+    </div>
   );
 }

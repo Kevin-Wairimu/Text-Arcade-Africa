@@ -2,45 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== Custom theme colors and base ===== */
-:root {
-  --taa-primary: #1e6b2b;
-  --taa-accent: #77bfa1;
-  --taa-dark: #111827;
-  --taa-light: #f3faf5;
+@layer base {
+  :root {
+    --taa-primary: #1e6b2b;
+    --taa-accent: #77bfa1;
+    --taa-dark: #111827;
+    --taa-light: #f3faf5;
+    --taa-surface: #ffffff;
+    --bg-main: #f8fafc;
+    --text-main: #0f172a;
+    --text-muted: #475569;
+  }
+
+  .dark {
+    --taa-surface: #1e293b;
+    --bg-main: #0f172a;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --taa-primary: #22c55e;
+    --taa-accent: #4ade80;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 14px;
+  }
+
+  @media (min-width: 768px) {
+    html { font-size: 15px; }
+  }
+
+  @media (min-width: 1024px) {
+    html { font-size: 16px; }
+  }
+
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    @apply transition-colors duration-300 antialiased overflow-x-hidden;
+  }
 }
 
-html {
-  scroll-behavior: smooth;
-}
+@layer components {
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
 
-body {
-  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    Roboto;
-  background: linear-gradient(to bottom, #ffffff, #f3faf5);
-  color: var(--taa-dark);
-}
+  /* Improved Glass Card - More Opaque for better visibility */
+  .glass-card {
+    @apply bg-white dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 shadow-xl;
+  }
 
-a {
-  transition: all 0.2s ease-in-out;
-}
+  .nav-glass {
+    @apply bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm;
+  }
 
-/* ===== Common components ===== */
-.btn-primary {
-  @apply bg-[var(--taa-primary)] text-white px-6 py-3 rounded-lg font-medium hover:bg-[var(--taa-dark)] transition shadow;
-}
+  .btn-primary {
+    @apply bg-taa-primary text-white px-5 py-3 md:px-8 md:py-4 rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-taa-primary/20 text-sm md:text-base;
+  }
 
-.btn-outline {
-  @apply border border-[var(--taa-primary)] text-[var(--taa-primary)] px-6 py-3 rounded-lg font-medium hover:bg-[var(--taa-primary)] hover:text-white transition;
+  .btn-outline {
+    @apply border-2 border-taa-primary text-taa-primary px-5 py-3 md:px-8 md:py-4 rounded-xl font-bold hover:bg-taa-primary hover:text-white transition-all active:scale-95 text-sm md:text-base;
+  }
 }
 
 @keyframes marquee {
-  0% {
-    transform: translateX(100%);
-  }
-  100% {
-    transform: translateX(-100%);
-  }
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
 }
 
 .animate-marquee {
@@ -48,7 +77,6 @@ a {
   animation: marquee 25s linear infinite;
 }
 
-/* globals.css or App.css */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;

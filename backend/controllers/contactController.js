@@ -1,14 +1,17 @@
 const express = require("express");
-const nodemailer = require("nodemailer");
+const { sendEmail } = require("../utils/email");
 require("dotenv").config();
 
 const router = express.Router();
 
-// POST /api/contact
-router.post("/", async (req, res) => {
+/**
+ * sendContactMessage
+ * This can be used as a standalone controller function or via the router below.
+ */
+const sendContactMessage = async (req, res) => {
   const { name, email, message } = req.body;
 
-  console.log("📥 Contact form payload:", { name, email, message });
+  console.log("📥 Contact form payload (Controller):", { name, email, message });
 
   // Validate all fields
   if (!name || !email || !message) {
@@ -16,40 +19,33 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ success: false, message: "All fields are required" });
   }
 
-  // Respond immediately to avoid frontend timeout
-  res.json({ success: true, message: "Message received! We'll get back to you shortly." });
+  try {
+    const mailOptions = {
+      from: `"Text Arcade Africa" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
+      to: process.env.CONTACT_RECEIVER || process.env.SMTP_USER || process.env.EMAIL_USER,
+      subject: `New Contact Message from ${name}`,
+      text: `Name: ${name}\nEmail: ${email}\nMessage:\n${message}`,
+      replyTo: email
+    };
 
-  // Send email asynchronously
-  setImmediate(async () => {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: parseInt(process.env.SMTP_PORT) === 465,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-        tls: { rejectUnauthorized: false },
-      });
+    await sendEmail(mailOptions);
+    console.log("✅ Contact email sent (Controller)");
 
-      // Verify SMTP connection
-      const verification = await transporter.verify();
-      console.log("✅ SMTP connection verified:", verification);
+    return res.json({ 
+      success: true, 
+      message: "Message received! We'll get back to you shortly." 
+    });
+  } catch (err) {
+    console.error("❌ Contact email error (Controller):", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send message. Please try again later.",
+      error: process.env.NODE_ENV === "development" ? err.message : undefined
+    });
+  }
+};
 
-      const mailOptions = {
-        from: `"Text Arcade Africa" <${process.env.SMTP_USER}>`,
-        to: process.env.CONTACT_RECEIVER || process.env.SMTP_USER || "your-contact-email@example.com",
-        subject: `New Contact Message from ${name}`,
-        text: `Name: ${name}\nEmail: ${email}\nMessage:\n${message}`,
-      };
+// POST /api/contact (Legacy Router support)
+router.post("/", sendContactMessage);
 
-      const info = await transporter.sendMail(mailOptions);
-      console.log("✅ Contact email sent:", { ...mailOptions, messageId: info.messageId });
-    } catch (err) {
-      console.error("❌ Contact email error:", err.message, err.stack);
-    }
-  });
-});
-
-module.exports = router;
+module.exports = { router, sendContactMessage };

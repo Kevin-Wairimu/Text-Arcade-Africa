@@ -1,185 +1,152 @@
-// src/components/Footer.jsx
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import API from "../utils/api";
 import { useAlert } from "../context/AlertContext";
+import { Send, MessageSquare, Mail, Globe } from "lucide-react";
 
 function Footer() {
   const { showAlert } = useAlert();
 
   const [helpForm, setHelpForm] = useState({ email: "", message: "" });
   const [isHelpLoading, setIsHelpLoading] = useState(false);
-  const [helpErrors, setHelpErrors] = useState({ email: "", message: "" });
-
+  
   const [feedbackForm, setFeedbackForm] = useState({ email: "", message: "" });
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
-  const [feedbackErrors, setFeedbackErrors] = useState({ email: "", message: "" });
 
-  const validateForm = (form) => {
-    const errors = { email: "", message: "" };
-    let isValid = true;
-
-    if (!form.email.trim()) {
-      errors.email = "Email is required";
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errors.email = "Invalid email format";
-      isValid = false;
-    }
-
-    if (!form.message.trim()) {
-      errors.message = "Message is required";
-      isValid = false;
-    } else if (form.message.length < 10) {
-      errors.message = "Message must be at least 10 characters";
-      isValid = false;
-    }
-
-    return { isValid, errors };
-  };
-
-  const handleFormSubmit = async (e, type, form, setLoading, setForm, setErrors) => {
+  const handleFormSubmit = async (e, type, form, setLoading, setForm) => {
     e.preventDefault();
-    const { isValid, errors } = validateForm(form);
-    if (!isValid) {
-      setErrors(errors);
-      showAlert("Please fix the form errors.", "error");
+    if (!form.email || !form.message) {
+      showAlert("All fields are required.", "error");
       return;
     }
 
     setLoading(true);
     try {
-      const payload = { email: form.email, message: `${type}: ${form.message}` };
-      const { data } = await API.post("/contact", payload);
-
-      showAlert(data.message, "success");
+      const payload = { 
+        name: `${type} Form Visitor`,
+        email: form.email, 
+        message: `${type}: ${form.message}` 
+      };
+      await API.post("/contact", payload);
+      showAlert("Message sent successfully!", "success");
       setForm({ email: "", message: "" });
-      setErrors({ email: "", message: "" });
     } catch (err) {
-      const errorMessage = err.response?.data?.message || "Something went wrong.";
-      showAlert(errorMessage, "error");
+      showAlert("Failed to send message.", "error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <footer className="relative bg-gradient-to-r from-[#f5f5f5] via-[#e0e0e0] to-[#f5f5f5] text-gray-900 overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-transparent via-[#ffffff]/20 to-[#e0e0e0]/40 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-tr from-white/10 via-transparent to-black/5 opacity-30 pointer-events-none" />
+    <footer className="bg-taa-light dark:bg-taa-dark/50 border-t border-taa-primary/10 dark:border-white/5 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-6 py-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
+          {/* Brand & Mission */}
+          <div className="space-y-6">
+            <Link to="/" className="inline-block">
+              <span className="text-3xl font-black text-taa-primary tracking-tighter">
+                TAA
+              </span>
+            </Link>
+            <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
+              Empowering African media innovation through design, data, and technology-driven storytelling.
+            </p>
+            {/* <div className="flex gap-4">
+              {[Globe, Mail].map((Icon, i) => (
+                <div key={i} className="w-10 h-10 rounded-full bg-taa-primary/10 flex items-center justify-center text-taa-primary hover:bg-taa-primary hover:text-white transition-all cursor-pointer">
+                  <Icon size={18} />
+                </div>
+              ))}
+            </div> */}
+          </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-        {/* Brand */}
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} className="sm:col-span-2 lg:col-span-1">
-          <h3 className="font-bold text-2xl text-[#2E7D32] mb-3">Text Africa Arcade</h3>
-          <p className="text-gray-700 text-sm leading-relaxed">
-            Empowering African media innovation through design, data, and technology-driven storytelling.
-          </p>
-        </motion.div>
+          {/* Navigation */}
+          <div>
+            <h4 className="font-bold text-taa-dark dark:text-white mb-6 uppercase tracking-widest text-sm">Navigation</h4>
+            <ul className="space-y-4">
+              {["Home", "About", "Services", "Team", "Contact"].map((page) => (
+                <li key={page}>
+                  <Link
+                    to={page === "Home" ? "/" : `/${page.toLowerCase()}`}
+                    className="text-gray-600 dark:text-gray-400 hover:text-taa-primary dark:hover:text-taa-accent font-medium transition-colors"
+                  >
+                    {page}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-        {/* Quick Links */}
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}>
-          <h4 className="font-semibold text-[#2E7D32] mb-4">Quick Links</h4>
-          <ul className="space-y-2 text-sm">
-            {["Home", "About", "Services", "Team", "Contact"].map((page) => (
-              <li key={page}>
-                <Link
-                  to={`/${page.toLowerCase() === "home" ? "" : page.toLowerCase()}`}
-                  className="text-gray-700 hover:text-[#2E7D32] transition duration-200"
+          {/* Quick Contact Form */}
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Help Form */}
+            <div className="glass-card p-6 rounded-2xl border-taa-primary/10">
+              <h4 className="font-bold text-taa-primary mb-4 flex items-center gap-2">
+                <MessageSquare size={18} /> Help Desk
+              </h4>
+              <form onSubmit={(e) => handleFormSubmit(e, "Help", helpForm, setIsHelpLoading, setHelpForm)} className="space-y-3">
+                <input
+                  type="email"
+                  placeholder="Your email"
+                  value={helpForm.email}
+                  onChange={(e) => setHelpForm({...helpForm, email: e.target.value})}
+                  className="w-full p-3 rounded-xl bg-white dark:bg-taa-dark border-none focus:ring-2 focus:ring-taa-primary text-sm outline-none"
+                />
+                <textarea
+                  placeholder="How can we help?"
+                  rows="2"
+                  value={helpForm.message}
+                  onChange={(e) => setHelpForm({...helpForm, message: e.target.value})}
+                  className="w-full p-3 rounded-xl bg-white dark:bg-taa-dark border-none focus:ring-2 focus:ring-taa-primary text-sm outline-none resize-none"
+                />
+                <button 
+                  disabled={isHelpLoading}
+                  className="w-full py-3 bg-taa-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all disabled:opacity-50"
                 >
-                  {page}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </motion.div>
+                  {isHelpLoading ? "..." : <><Send size={14} /> Send</>}
+                </button>
+              </form>
+            </div>
 
-        {/* Help Form */}
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}>
-          <h4 className="font-semibold text-[#2E7D32] mb-4">Need Help?</h4>
-          <form
-            onSubmit={(e) =>
-              handleFormSubmit(e, "Help Request", helpForm, setIsHelpLoading, setHelpForm, setHelpErrors)
-            }
-            className="flex flex-col gap-3"
-          >
-            <input
-              type="email"
-              placeholder="Your Email"
-              value={helpForm.email}
-              onChange={(e) => setHelpForm({ ...helpForm, email: e.target.value })}
-              className={`p-3 rounded-lg w-full bg-white/70 text-gray-900 placeholder-gray-500 border ${
-                helpErrors.email ? "border-red-500" : "border-[#2E7D32]/50"
-              } focus:ring-2 focus:ring-[#2E7D32] transition duration-200`}
-            />
-            {helpErrors.email && <p className="text-red-500 text-sm">{helpErrors.email}</p>}
+            {/* Feedback Form */}
+            <div className="glass-card p-6 rounded-2xl border-taa-accent/20">
+              <h4 className="font-bold text-taa-accent mb-4 flex items-center gap-2">
+                <MessageSquare size={18} /> Feedback
+              </h4>
+              <form onSubmit={(e) => handleFormSubmit(e, "Feedback", feedbackForm, setIsFeedbackLoading, setFeedbackForm)} className="space-y-3">
+                <input
+                  type="email"
+                  placeholder="Your email"
+                  value={feedbackForm.email}
+                  onChange={(e) => setFeedbackForm({...feedbackForm, email: e.target.value})}
+                  className="w-full p-3 rounded-xl bg-white dark:bg-taa-dark border-none focus:ring-2 focus:ring-taa-accent text-sm outline-none"
+                />
+                <textarea
+                  placeholder="Your feedback..."
+                  rows="2"
+                  value={feedbackForm.message}
+                  onChange={(e) => setFeedbackForm({...feedbackForm, message: e.target.value})}
+                  className="w-full p-3 rounded-xl bg-white dark:bg-taa-dark border-none focus:ring-2 focus:ring-taa-accent text-sm outline-none resize-none"
+                />
+                <button 
+                  disabled={isFeedbackLoading}
+                  className="w-full py-3 bg-taa-accent text-taa-dark rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all disabled:opacity-50"
+                >
+                  {isFeedbackLoading ? "..." : <><Send size={14} /> Submit</>}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
 
-            <textarea
-              placeholder="How can we help?"
-              rows="3"
-              value={helpForm.message}
-              onChange={(e) => setHelpForm({ ...helpForm, message: e.target.value })}
-              className={`p-3 rounded-lg w-full bg-white/70 text-gray-900 placeholder-gray-500 border ${
-                helpErrors.message ? "border-red-500" : "border-[#2E7D32]/50"
-              } resize-none focus:ring-2 focus:ring-[#2E7D32] transition duration-200`}
-            />
-            {helpErrors.message && <p className="text-red-500 text-sm">{helpErrors.message}</p>}
-
-            <button
-              type="submit"
-              disabled={isHelpLoading}
-              className="bg-[#2E7D32] hover:bg-[#81C784] text-white font-semibold px-4 py-2 rounded-lg transition duration-200 disabled:opacity-50"
-            >
-              {isHelpLoading ? "Sending..." : "Send Request"}
-            </button>
-          </form>
-        </motion.div>
-
-        {/* Feedback Form */}
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}>
-          <h4 className="font-semibold text-[#2E7D32] mb-4">Give Feedback</h4>
-          <form
-            onSubmit={(e) =>
-              handleFormSubmit(e, "Feedback", feedbackForm, setIsFeedbackLoading, setFeedbackForm, setFeedbackErrors)
-            }
-            className="flex flex-col gap-3"
-          >
-            <input
-              type="email"
-              placeholder="Your Email"
-              value={feedbackForm.email}
-              onChange={(e) => setFeedbackForm({ ...feedbackForm, email: e.target.value })}
-              className={`p-3 rounded-lg w-full bg-white/70 text-gray-900 placeholder-gray-500 border ${
-                feedbackErrors.email ? "border-red-500" : "border-[#2E7D32]/50"
-              } focus:ring-2 focus:ring-[#2E7D32] transition duration-200`}
-            />
-            {feedbackErrors.email && <p className="text-red-500 text-sm">{feedbackErrors.email}</p>}
-
-            <textarea
-              placeholder="Your valuable feedback..."
-              rows="3"
-              value={feedbackForm.message}
-              onChange={(e) => setFeedbackForm({ ...feedbackForm, message: e.target.value })}
-              className={`p-3 rounded-lg w-full bg-white/70 text-gray-900 placeholder-gray-500 border ${
-                feedbackErrors.message ? "border-red-500" : "border-[#2E7D32]/50"
-              } resize-none focus:ring-2 focus:ring-[#2E7D32] transition duration-200`}
-            />
-            {feedbackErrors.message && <p className="text-red-500 text-sm">{feedbackErrors.message}</p>}
-
-            <button
-              type="submit"
-              disabled={isFeedbackLoading}
-              className="bg-[#2E7D32] hover:bg-[#81C784] text-white font-semibold px-4 py-2 rounded-lg transition duration-200 disabled:opacity-50"
-            >
-              {isFeedbackLoading ? "Submitting..." : "Submit Feedback"}
-            </button>
-          </form>
-        </motion.div>
-      </div>
-
-      <div className="relative z-10 border-t border-[#2E7D32]/30 text-center py-4 text-sm text-[#2E7D32]/90 bg-white/20">
-        © {new Date().getFullYear()} Text Africa Arcade. All rights reserved.
+        <div className="mt-20 pt-8 border-t border-taa-primary/10 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-sm font-medium text-gray-500">
+          <p>© {new Date().getFullYear()} Text Africa Arcade. All rights reserved.</p>
+          {/* <div className="flex gap-8">
+            <Link to="/privacy" className="hover:text-taa-primary">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-taa-primary">Terms of Service</Link>
+          </div> */}
+        </div>
       </div>
     </footer>
   );

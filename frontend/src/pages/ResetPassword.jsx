@@ -1,85 +1,84 @@
 import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import API from "../utils/api";
 import { useAlert } from "../context/AlertContext";
+import { Lock, ArrowRight, Loader2, ShieldCheck, ChevronLeft } from "lucide-react";
 
 export default function ResetPassword() {
   const { token } = useParams();
   const navigate = useNavigate();
   const { showAlert } = useAlert();
-
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (password !== confirmPassword)
-      return showAlert("Passwords do not match.", "error");
-    if (password.length < 6)
-      return showAlert("Password must be at least 6 characters long.", "error");
-
     setLoading(true);
     try {
-      const { data } = await API.post(`/api/auth/reset-password/${token}`, {
-        password,
-      });
-      showAlert(data.message, "success");
-      setTimeout(() => navigate("/login"), 1500);
+      const { data } = await API.post(`/auth/reset-password/${token}`, { password });
+      showAlert(data.message || "Password reset successfully!", "success");
+      setTimeout(() => navigate("/login"), 1000);
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message ||
-        "Invalid or expired token. Please try again.";
-      showAlert(errorMessage, "error");
+      const msg = err.response?.data?.message || "Invalid or expired token";
+      showAlert(msg, "error");
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-taa-primary/20 via-taa-accent/10 to-emerald-50">
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-md p-10 rounded-2xl border border-white/30 bg-white/20 backdrop-blur-lg shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+    <main className="min-h-screen flex items-center justify-center bg-taa-surface dark:bg-taa-dark p-6 transition-colors duration-300 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-96 h-96 bg-taa-accent/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
+      
+      <Link
+        to="/login"
+        className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold text-taa-primary dark:text-taa-accent hover:opacity-70 transition-all z-20"
       >
-        <h1 className="text-3xl font-bold text-center text-taa-primary mb-2">
-          Reset Password
-        </h1>
-        <p className="text-center text-gray-600 mb-8">
-          Enter your new password below.
-        </p>
+        <ChevronLeft size={18} />
+        <span>Back to Login</span>
+      </Link>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <input
-            type="password"
-            placeholder="New Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full p-3 rounded-lg border border-white/30 bg-white/30 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-taa-accent focus:outline-none backdrop-blur-sm"
-          />
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            className="w-full p-3 rounded-lg border border-white/30 bg-white/30 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-taa-accent focus:outline-none backdrop-blur-sm"
-          />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md z-10"
+      >
+        <div className="glass-card p-8 md:p-10 rounded-[2.5rem] shadow-2xl border-taa-primary/5 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-taa-accent/10 text-taa-accent mb-6">
+            <ShieldCheck size={32} />
+          </div>
+          
+          <h1 className="text-3xl font-black text-taa-dark dark:text-white tracking-tight mb-2">
+            Set New Password
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 font-medium mb-8">
+            Secure your account with a strong, memorable password.
+          </p>
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-taa-primary to-taa-accent text-white py-3 rounded-lg font-semibold shadow-md hover:opacity-90 transition disabled:opacity-50"
-          >
-            {loading ? "Resetting..." : "Reset Password"}
-          </motion.button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative group text-left">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-taa-primary transition-colors" size={20} />
+              <input
+                type="password"
+                placeholder="New Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white dark:bg-taa-dark/50 border-2 border-transparent focus:border-taa-primary outline-none transition-all dark:text-white"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-taa-primary text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 hover:brightness-110 shadow-xl transition-all disabled:opacity-50 active:scale-95"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : <>Update Password <ArrowRight size={20} /></>}
+            </button>
+          </form>
+        </div>
       </motion.div>
     </main>
   );

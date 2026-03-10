@@ -3,72 +3,87 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import API from "../utils/api";
 import { useAlert } from "../context/AlertContext";
+import { Home, Mail, ArrowRight, Loader2, KeyRound, ChevronLeft } from "lucide-react";
 
 export default function ForgotPassword() {
   const { showAlert } = useAlert();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const { data } = await API.post("/auth/forgot-password", { email });
-      showAlert(data.message || "Password reset link sent!", "success");
+      showAlert(data.message || "Reset link sent to your email!", "success");
       setEmail("");
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || "Email not found or server error.";
-      showAlert(errorMessage, "error");
+      const msg = err.response?.data?.message || "Something went wrong";
+      showAlert(msg, "error");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-taa-primary/20 via-taa-accent/10 to-emerald-50">
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-md p-10 rounded-2xl border border-white/30 bg-white/20 backdrop-blur-lg shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+    <main className="min-h-screen flex items-center justify-center bg-taa-surface dark:bg-taa-dark p-6 transition-colors duration-300 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-96 h-96 bg-taa-primary/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      
+      <Link
+        to="/login"
+        className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold text-taa-primary dark:text-taa-accent hover:opacity-70 transition-all z-20"
       >
-        <h1 className="text-3xl font-bold text-center text-taa-primary mb-2">
-          Forgot Password
-        </h1>
-        <p className="text-center text-gray-600 mb-8">
-          Enter your email and we’ll send you a reset link.
-        </p>
+        <ChevronLeft size={18} />
+        <span>Back to Login</span>
+      </Link>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <input
-            type="email"
-            placeholder="Email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full p-3 rounded-lg border border-white/30 bg-white/30 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-taa-accent focus:outline-none backdrop-blur-sm"
-          />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md z-10"
+      >
+        <div className="glass-card p-8 md:p-10 rounded-[2.5rem] shadow-2xl border-taa-primary/5 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-taa-primary/10 text-taa-primary mb-6">
+            <KeyRound size={32} />
+          </div>
+          
+          <h1 className="text-3xl font-black text-taa-dark dark:text-white tracking-tight mb-2">
+            Forgot Password?
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 font-medium mb-8">
+            Enter your email and we'll send you a link to reset your password.
+          </p>
 
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-taa-primary to-taa-accent text-white py-3 rounded-lg font-semibold shadow-md hover:opacity-90 transition disabled:opacity-50"
-          >
-            {loading ? "Sending..." : "Send Reset Link"}
-          </motion.button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative group text-left">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-taa-primary transition-colors" size={20} />
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white dark:bg-taa-dark/50 border-2 border-transparent focus:border-taa-primary outline-none transition-all dark:text-white"
+              />
+            </div>
 
-        <div className="text-center mt-6 text-sm">
-          <Link
-            to="/login"
-            className="text-taa-accent hover:underline font-medium"
-          >
-            ← Back to Login
-          </Link>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-taa-primary text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 hover:brightness-110 shadow-xl transition-all disabled:opacity-50 active:scale-95"
+            >
+              {loading ? <Loader2 className="animate-spin" /> : <>Send Reset Link <ArrowRight size={20} /></>}
+            </button>
+          </form>
+
+          <div className="mt-8">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-taa-primary transition-colors"
+            >
+              <Home size={16} /> Return to Home
+            </Link>
+          </div>
         </div>
       </motion.div>
     </main>

@@ -11,25 +11,29 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
+    if (file.mimetype.startsWith("image/") || file.mimetype.startsWith("video/")) {
       cb(null, true);
     } else {
-      cb(new Error("Only images are allowed"));
+      cb(new Error("Only images and videos are allowed"));
     }
   },
 });
 
-router.post("/upload", upload.single("image"), (req, res) => {
+router.post("/upload", upload.single("file"), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
-    res.json({ imageUrl: `/uploads/${req.file.filename}` });
+    const isVideo = req.file.mimetype.startsWith("video/");
+    res.json({ 
+      url: `/uploads/${req.file.filename}`,
+      type: isVideo ? "video" : "image"
+    });
   } catch (err) {
     console.error("Upload error:", err);
-    res.status(400).json({ message: err.message || "Failed to upload image" });
+    res.status(400).json({ message: err.message || "Failed to upload file" });
   }
 });
 

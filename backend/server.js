@@ -70,7 +70,7 @@ app.options("*", cors(corsOptions)); // Handle preflight requests explicitly
 // ================================
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static("Uploads"));
+app.use("/uploads", express.static("uploads"));
 
 // ================================
 // ✅ API ROUTES
