@@ -116,9 +116,22 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
           )}
         </div>
         
-        <h3 className="font-bold text-xl text-taa-dark dark:text-white group-hover:text-taa-primary dark:group-hover:text-taa-accent transition-colors line-clamp-2 mb-3">
+        <h3 className="font-bold text-xl text-taa-dark dark:text-white group-hover:text-taa-primary dark:group-hover:text-taa-accent transition-colors line-clamp-2 mb-1">
           {article.title || "Untitled Article"}
         </h3>
+        
+        {(() => {
+          const labels = article.imageLabels || {};
+          const mainImg = article.image || article.images?.[0];
+          const label = labels[mainImg] || 
+                       Object.entries(labels).find(([key]) => key.includes(mainImg) || mainImg.includes(key))?.[1];
+          
+          return label ? (
+            <p className="text-[9px] font-black uppercase tracking-widest text-taa-primary/70 dark:text-taa-accent/70 mb-3">
+              Delegate Identity: {label}
+            </p>
+          ) : null;
+        })()}
         
         <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3 mb-6 flex-grow leading-relaxed">
           {article.content?.replace(/<[^>]*>/g, '').slice(0, 150)}...

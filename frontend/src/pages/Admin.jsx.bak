@@ -188,7 +188,7 @@ export default function Admin() {
     const textarea = contentRef.current;
     if (!textarea) return;
 
-    const label = articleForm.imageLabels[imgUrl] || "Editorial Media Asset";
+    const label = articleForm.imageLabels[imgUrl] || "CEO of NMG Uganda Susan Nsiribwa";
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const text = articleForm.content;

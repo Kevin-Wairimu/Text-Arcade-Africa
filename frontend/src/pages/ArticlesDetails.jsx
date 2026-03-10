@@ -312,6 +312,18 @@ export default function ArticleDetails() {
                 <h1 className={`${isVintage ? 'text-4xl md:text-6xl font-serif font-black text-black leading-tight border-l-4 border-black pl-6' : 'text-3xl md:text-6xl font-black text-white leading-[1.1] drop-shadow-2xl'}`}>
                   {article.title}
                 </h1>
+                {(() => {
+                  const labels = article.imageLabels || {};
+                  const mainImg = article.image || article.images?.[0];
+                  const label = labels[mainImg] || 
+                               Object.entries(labels).find(([key]) => key.includes(mainImg) || mainImg.includes(key))?.[1];
+                  
+                  return label ? (
+                    <p className={`mt-4 text-[10px] font-black uppercase tracking-[0.3em] ${isVintage ? 'text-black/60 font-serif italic' : 'text-white/70'}`}>
+                      Delegate Identity: {label}
+                    </p>
+                  ) : null;
+                })()}
               </div>
             </div>
           )}
@@ -380,14 +392,18 @@ export default function ArticleDetails() {
               />
 
               {/* Combined Story Delegates Gallery */}
-              {otherImages.length > 0 && (
+              {/* {otherImages.length > 0 && (
                 <div className={`my-16 py-12 border-y ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
                   <h3 className={`text-xl font-black ${isVintage ? 'text-black font-serif italic' : 'text-taa-dark dark:text-white'} mb-6 uppercase tracking-widest flex items-center gap-2`}>
-                    <Sparkles size={18} className={isVintage ? 'text-black' : 'text-taa-primary'} /> Story Delegates
+                    <Sparkles size={18} className={isVintage ? 'text-black' : 'text-taa-primary'} /> Story Delegates & Identities
                   </h3>
-                  <div className={`grid grid-cols-2 ${otherImages.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
+                  <div className={`grid grid-cols-2 ${otherImages.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-8`}>
                     {otherImages.map((img, i) => {
-                      const label = article.imageLabels?.[img];
+                      // Robust label lookup: direct or case-insensitive or partial
+                      const labels = article.imageLabels || {};
+                      const label = labels[img] || 
+                                   Object.entries(labels).find(([key]) => key.includes(img) || img.includes(key))?.[1];
+
                       return (
                         <motion.div 
                           key={i}
@@ -401,7 +417,7 @@ export default function ArticleDetails() {
                             <img src={img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img} className={`w-full h-full object-cover ${isVintage ? 'grayscale' : ''}`} alt={label || `Delegate ${i}`} />
                           </div>
                           {label && (
-                            <p className={`text-center text-[10px] font-black uppercase tracking-[0.2em] ${isVintage ? 'text-black/60 font-serif italic' : 'text-taa-primary/60 dark:text-white/40'}`}>
+                            <p className={`text-center text-xs md:text-sm font-black uppercase tracking-[0.2em] ${isVintage ? 'text-black font-serif italic' : 'text-taa-primary dark:text-taa-accent'}`}>
                               {label}
                             </p>
                           )}
@@ -410,7 +426,7 @@ export default function ArticleDetails() {
                     })}
                   </div>
                 </div>
-              )}
+              )} */}
 
               {contentParts[1] && (
                 <div 

@@ -164,9 +164,21 @@ export default function ClientDashboard() {
                           <Clock size={14} />
                           {new Date(article.publishedAt || article.createdAt).toLocaleDateString()}
                         </div>
-                        <h3 className="text-xl font-black text-taa-dark dark:text-white mb-4 line-clamp-2 leading-tight group-hover:text-taa-primary transition-colors">
+                        <h3 className="text-xl font-black text-taa-dark dark:text-white mb-1 line-clamp-2 leading-tight group-hover:text-taa-primary transition-colors">
                           {article.title}
                         </h3>
+                        {(() => {
+                          const labels = article.imageLabels || {};
+                          const mainImg = article.image || article.images?.[0];
+                          const label = labels[mainImg] || 
+                                       Object.entries(labels).find(([key]) => key.includes(mainImg) || mainImg.includes(key))?.[1];
+                          
+                          return label ? (
+                            <p className="text-[9px] font-black uppercase tracking-widest text-taa-primary/70 dark:text-taa-accent/70 mb-3">
+                              Delegate Identity: {label}
+                            </p>
+                          ) : null;
+                        })()}
                         <p className="text-gray-500 dark:text-gray-400 text-sm font-medium line-clamp-3 mb-8 flex-1">
                           {article.content?.replace(/<[^>]*>/g, '').substring(0, 150)}...
                         </p>
