@@ -1,155 +1,292 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import {
+  Instagram,
+  Facebook,
+  Twitter,
+  Mail,
+  MapPin,
+  Phone,
+  ArrowRight,
+  MessageSquare,
+  Send,
+  HelpCircle,
+} from "lucide-react";
+import { Icon } from "@iconify/react";
+import Logo from "./Logo";
 import API from "../utils/api";
 import { useAlert } from "../context/AlertContext";
-import { Send, MessageSquare, Mail, Globe } from "lucide-react";
 
-function Footer() {
+const Footer = () => {
+  const currentYear = new Date().getFullYear();
   const { showAlert } = useAlert();
 
-  const [helpForm, setHelpForm] = useState({ email: "", message: "" });
-  const [isHelpLoading, setIsHelpLoading] = useState(false);
-  
   const [feedbackForm, setFeedbackForm] = useState({ email: "", message: "" });
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
 
-  const handleFormSubmit = async (e, type, form, setLoading, setForm) => {
+  const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
-    if (!form.email || !form.message) {
-      showAlert("All fields are required.", "error");
+    if (!feedbackForm.message.trim()) {
+      showAlert("Feedback message cannot be empty", "error");
       return;
     }
 
-    setLoading(true);
+    setIsFeedbackLoading(true);
     try {
-      const payload = { 
-        name: `${type} Form Visitor`,
-        email: form.email, 
-        message: `${type}: ${form.message}` 
-      };
-      await API.post("/contact", payload);
-      showAlert("Message sent successfully!", "success");
-      setForm({ email: "", message: "" });
+      await API.post("/feedback", feedbackForm);
+      showAlert("Thank you for your feedback!", "success");
+      setFeedbackForm({ email: "", message: "" });
     } catch (err) {
-      showAlert("Failed to send message.", "error");
+      showAlert("Failed to send feedback. Please try again.", "error");
     } finally {
-      setLoading(false);
+      setIsFeedbackLoading(false);
     }
   };
 
   return (
-    <footer className="bg-taa-light dark:bg-taa-dark/50 border-t border-taa-primary/10 dark:border-white/5 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
-          {/* Brand & Mission */}
-          <div className="space-y-6">
-            <Link to="/" className="inline-block">
-              <span className="text-3xl font-black text-taa-primary tracking-tighter">
-                TAA
-              </span>
-            </Link>
-            <p className="text-gray-600 dark:text-gray-400 leading-relaxed font-medium">
-              Empowering African media innovation through design, data, and technology-driven storytelling.
-            </p>
-            {/* <div className="flex gap-4">
-              {[Globe, Mail].map((Icon, i) => (
-                <div key={i} className="w-10 h-10 rounded-full bg-taa-primary/10 flex items-center justify-center text-taa-primary hover:bg-taa-primary hover:text-white transition-all cursor-pointer">
-                  <Icon size={18} />
-                </div>
-              ))}
-            </div> */}
+    <footer className="bg-black border-t border-taa-primary/20 text-white selection:bg-taa-primary selection:text-white">
+      <div className="max-w-7xl mx-auto py-20 px-6 sm:px-8 lg:px-12">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-16 md:gap-12">
+          {/* Brand section - spans 4 columns */}
+          <div className="md:col-span-4 space-y-8">
+            <div className="space-y-6">
+              <Logo mode="icon" className="h-16 w-16" as="div" />
+              <div className="space-y-2">
+                <span className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-white group-hover:text-taa-primary transition-colors leading-none">
+                  Text Africa <span className="text-taa-primary">Arcade</span>
+                </span>
+                <p className="max-w-md text-white/50 font-medium leading-relaxed text-sm tracking-wide">
+                  Empowering African media innovation through design, data, and
+                  technology-driven storytelling. We don’t just report news; we
+                  architect digital experiences for the continent's most
+                  compelling narratives.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-4">
+              {/* {[
+                {
+                  icon: <Instagram className="h-5 w-5" />,
+                  url: "https://www.instagram.com/textafricaarcade/",
+                },
+                {
+                  icon: <Icon icon="simple-icons:tiktok" className="h-5 w-5" />,
+                  url: "#",
+                },
+                {
+                  icon: <Twitter className="h-5 w-5" />,
+                  url: "#",
+                },
+              ].map((social, i) => (
+                <a
+                  key={i}
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-12 w-12 border border-taa-primary/10 flex items-center justify-center text-taa-primary/60 hover:text-taa-primary hover:border-taa-primary/40 transition-all duration-500 rounded-2xl bg-white/5"
+                >
+                  {social.icon}
+                </a>
+              ))} */}
+            </div>
           </div>
 
-          {/* Navigation */}
-          <div>
-            <h4 className="font-bold text-taa-dark dark:text-white mb-6 uppercase tracking-widest text-sm">Navigation</h4>
-            <ul className="space-y-4">
-              {["Home", "About", "Services", "Team", "Contact"].map((page) => (
-                <li key={page}>
-                  <Link
-                    to={page === "Home" ? "/" : `/${page.toLowerCase()}`}
-                    className="text-gray-600 dark:text-gray-400 hover:text-taa-primary dark:hover:text-taa-accent font-medium transition-colors"
-                  >
-                    {page}
-                  </Link>
-                </li>
-              ))}
+          {/* Navigation Links - spans 2 columns */}
+          <div className="md:col-span-2">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-taa-primary mb-8">
+              Explore
+            </h3>
+            <ul className="space-y-4 text-[11px] uppercase tracking-[0.2em] font-bold text-white/40">
+              <li>
+                <a
+                  href="/"
+                  className="hover:text-taa-primary transition-colors block flex items-center gap-2 group"
+                >
+                  <ArrowRight
+                    size={10}
+                    className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+                  />
+                  Home
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/about"
+                  className="hover:text-taa-primary transition-colors block flex items-center gap-2 group"
+                >
+                  <ArrowRight
+                    size={10}
+                    className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+                  />
+                  About Us
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/services"
+                  className="hover:text-taa-primary transition-colors block flex items-center gap-2 group"
+                >
+                  <ArrowRight
+                    size={10}
+                    className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+                  />
+                  Services
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/team"
+                  className="hover:text-taa-primary transition-colors block flex items-center gap-2 group"
+                >
+                  <ArrowRight
+                    size={10}
+                    className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+                  />
+                  Our Team
+                </a>
+              </li>
             </ul>
           </div>
 
-          {/* Quick Contact Form */}
-          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {/* Help Form */}
-            <div className="glass-card p-6 rounded-2xl border-taa-primary/10">
-              <h4 className="font-bold text-taa-primary mb-4 flex items-center gap-2">
-                <MessageSquare size={18} /> Help Desk
-              </h4>
-              <form onSubmit={(e) => handleFormSubmit(e, "Help", helpForm, setIsHelpLoading, setHelpForm)} className="space-y-3">
-                <input
-                  type="email"
-                  placeholder="Your email"
-                  value={helpForm.email}
-                  onChange={(e) => setHelpForm({...helpForm, email: e.target.value})}
-                  className="w-full p-3 rounded-xl bg-white dark:bg-taa-dark border-none focus:ring-2 focus:ring-taa-primary text-sm outline-none"
-                />
-                <textarea
-                  placeholder="How can we help?"
-                  rows="2"
-                  value={helpForm.message}
-                  onChange={(e) => setHelpForm({...helpForm, message: e.target.value})}
-                  className="w-full p-3 rounded-xl bg-white dark:bg-taa-dark border-none focus:ring-2 focus:ring-taa-primary text-sm outline-none resize-none"
-                />
-                <button 
-                  disabled={isHelpLoading}
-                  className="w-full py-3 bg-taa-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all disabled:opacity-50"
+          {/* Help Links - spans 2 columns */}
+          {/* <div className="md:col-span-2">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-taa-primary mb-8">
+              Help Hub
+            </h3>
+            <ul className="space-y-4 text-[11px] uppercase tracking-[0.2em] font-bold text-white/40">
+              <li>
+                <a
+                  href="#"
+                  className="hover:text-taa-primary transition-colors block flex items-center gap-2 group"
                 >
-                  {isHelpLoading ? "..." : <><Send size={14} /> Send</>}
-                </button>
-              </form>
-            </div>
+                  <HelpCircle
+                    size={10}
+                    className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+                  />
+                  Knowledge Base
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#"
+                  className="hover:text-taa-primary transition-colors block flex items-center gap-2 group"
+                >
+                  <HelpCircle
+                    size={10}
+                    className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+                  />
+                  Guidelines
+                </a>
+              </li>
+              <li>
+                <a
+                  href="#"
+                  className="hover:text-taa-primary transition-colors block flex items-center gap-2 group"
+                >
+                  <HelpCircle
+                    size={10}
+                    className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+                  />
+                  FAQ
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/contact"
+                  className="hover:text-taa-primary transition-colors block flex items-center gap-2 group"
+                >
+                  <HelpCircle
+                    size={10}
+                    className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all"
+                  />
+                  Contact Support
+                </a>
+              </li>
+            </ul>
+          </div> */}
 
-            {/* Feedback Form */}
-            <div className="glass-card p-6 rounded-2xl border-taa-accent/20">
-              <h4 className="font-bold text-taa-accent mb-4 flex items-center gap-2">
-                <MessageSquare size={18} /> Feedback
-              </h4>
-              <form onSubmit={(e) => handleFormSubmit(e, "Feedback", feedbackForm, setIsFeedbackLoading, setFeedbackForm)} className="space-y-3">
+          {/* Feedback Form - spans 4 columns */}
+          <div className="md:col-span-4">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-taa-primary mb-8 flex items-center gap-2">
+              <MessageSquare size={14} /> Story Feedback
+            </h3>
+            <div className="glass-card p-6 rounded-2xl border-taa-primary/10 bg-white/5 backdrop-blur-sm">
+              <form onSubmit={handleFeedbackSubmit} className="space-y-3">
                 <input
                   type="email"
-                  placeholder="Your email"
+                  placeholder="Your email (Optional)"
                   value={feedbackForm.email}
-                  onChange={(e) => setFeedbackForm({...feedbackForm, email: e.target.value})}
-                  className="w-full p-3 rounded-xl bg-white dark:bg-taa-dark border-none focus:ring-2 focus:ring-taa-accent text-sm outline-none"
+                  onChange={(e) =>
+                    setFeedbackForm({ ...feedbackForm, email: e.target.value })
+                  }
+                  className="w-full p-3 rounded-xl bg-black border border-taa-primary/10 focus:border-taa-primary text-sm outline-none text-white transition-all placeholder:text-white/20"
                 />
                 <textarea
                   placeholder="Your feedback..."
-                  rows="2"
+                  rows="3"
                   value={feedbackForm.message}
-                  onChange={(e) => setFeedbackForm({...feedbackForm, message: e.target.value})}
-                  className="w-full p-3 rounded-xl bg-white dark:bg-taa-dark border-none focus:ring-2 focus:ring-taa-accent text-sm outline-none resize-none"
+                  onChange={(e) =>
+                    setFeedbackForm({
+                      ...feedbackForm,
+                      message: e.target.value,
+                    })
+                  }
+                  className="w-full p-3 rounded-xl bg-black border border-taa-primary/10 focus:border-taa-primary text-sm outline-none text-white transition-all placeholder:text-white/20 resize-none"
                 />
-                <button 
+                <button
                   disabled={isFeedbackLoading}
-                  className="w-full py-3 bg-taa-accent text-taa-dark rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all disabled:opacity-50"
+                  className="w-full py-3 bg-taa-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all disabled:opacity-50"
                 >
-                  {isFeedbackLoading ? "..." : <><Send size={14} /> Submit</>}
+                  {isFeedbackLoading ? (
+                    "..."
+                  ) : (
+                    <>
+                      <Send size={14} /> Submit Feedback
+                    </>
+                  )}
                 </button>
               </form>
             </div>
           </div>
         </div>
 
-        <div className="mt-20 pt-8 border-t border-taa-primary/10 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-sm font-medium text-gray-500">
-          <p>© {new Date().getFullYear()} Text Africa Arcade. All rights reserved.</p>
-          {/* <div className="flex gap-8">
-            <Link to="/privacy" className="hover:text-taa-primary">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-taa-primary">Terms of Service</Link>
-          </div> */}
+        {/* BOTTOM SECTION */}
+        <div className="mt-24 pt-12 border-t border-taa-primary/10 flex flex-col md:flex-row justify-between items-center gap-8">
+          {/* Credits - Bottom Left */}
+          <div className="order-2 md:order-1 flex flex-col items-center md:items-start gap-2">
+            <div className="flex items-center gap-3 text-[9px] uppercase tracking-[0.4em] font-black text-white/30">
+              <span>Architected By</span>
+              <div className="h-px w-8 bg-taa-primary/20" />
+              <a
+                href="https://port-folio-git-main-kevin-wairimus-projects.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-taa-primary/60 hover:text-taa-primary transition-all duration-500 hover:tracking-[0.6em]"
+              >
+                Kevin Wairimu
+              </a>
+            </div>
+            <p className="text-[8px] uppercase tracking-[0.2em] text-white/20">
+              Digital Transformation &bull; Media Innovation &copy;{" "}
+              {currentYear}
+            </p>
+          </div>
+
+          {/* Legal / Secondary Nav - Bottom Right */}
+          <div className="order-1 md:order-2 flex items-center gap-8 text-[9px] uppercase tracking-[0.3em] font-bold text-white/20">
+            <a href="#" className="hover:text-taa-primary/40 transition-colors">
+              Privacy
+            </a>
+            <a href="#" className="hover:text-taa-primary/40 transition-colors">
+              Terms
+            </a>
+            <div className="h-1 w-1 bg-taa-primary/40 rounded-full" />
+            <span className="text-white/40">Text Africa Arcade&trade;</span>
+          </div>
         </div>
       </div>
     </footer>
   );
-}
+};
 
 export default Footer;

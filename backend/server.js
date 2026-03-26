@@ -28,10 +28,10 @@ const PORT = process.env.PORT || 5000;
 const isOriginAllowed = (origin) => {
   // Allow requests with no origin (like mobile apps or curl)
   if (!origin) return true;
-  
+
   // Allow Localhost
   if (origin.startsWith("http://localhost")) return true;
-  
+
   // Allow Main Production Site
   if (origin === "https://text-arcade-africa.pages.dev") return true;
 
@@ -59,7 +59,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 
 app.use(cors(corsOptions));
@@ -89,7 +89,7 @@ app.use("/api/settings", settingsRoutes);
 app.get("/api/debug", (req, res) => res.json({ message: "API is live ✅" }));
 app.get("/api/ping", (req, res) => res.json({ status: "awake" }));
 app.get("/api/health", (req, res) =>
-  res.json({ ok: true, message: "Backend ready", uptime: process.uptime() })
+  res.json({ ok: true, message: "Backend ready", uptime: process.uptime() }),
 );
 app.get("/api/warmup", async (req, res) => {
   try {
@@ -129,7 +129,9 @@ app.get("/api/cloudflare/access/apps", async (req, res) => {
         data: [],
       });
     }
-    const data = await callCloudflareAPI(`/accounts/${CF_ACCOUNT_ID}/access/apps`);
+    const data = await callCloudflareAPI(
+      `/accounts/${CF_ACCOUNT_ID}/access/apps`,
+    );
     res.json(data);
   } catch (err) {
     console.error("Cloudflare Access Apps API error:", err.message);
@@ -147,7 +149,7 @@ app.get("/api/cloudflare/access/organizations", async (req, res) => {
       });
     }
     const data = await callCloudflareAPI(
-      `/accounts/${CF_ACCOUNT_ID}/access/organizations`
+      `/accounts/${CF_ACCOUNT_ID}/access/organizations`,
     );
     res.json(data);
   } catch (err) {
@@ -160,7 +162,7 @@ app.get("/api/cloudflare/access/organizations", async (req, res) => {
 // ✅ 404 Handler
 // ================================
 app.use((req, res) =>
-  res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` })
+  res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` }),
 );
 
 // ================================
@@ -169,8 +171,12 @@ app.use((req, res) =>
 app.use((err, req, res, next) => {
   console.error("🔥 Server error:", err.message);
   const errorMessage =
-    process.env.NODE_ENV === "production" ? "Internal Server Error" : err.message;
-  res.status(500).json({ error: "Internal Server Error", details: errorMessage });
+    process.env.NODE_ENV === "production"
+      ? "Internal Server Error"
+      : err.message;
+  res
+    .status(500)
+    .json({ error: "Internal Server Error", details: errorMessage });
 });
 
 // ================================
@@ -179,7 +185,7 @@ app.use((err, req, res, next) => {
 mongoose.set("strictQuery", true);
 
 if (!process.env.MONGO_URI) {
-  console.error("❌ MONGO_URI missing in .env");
+  console.error(" MONGO_URI missing in .env");
   process.exit(1);
 }
 
@@ -189,7 +195,7 @@ mongoose
     useUnifiedTopology: true,
   })
   .then(() => {
-    console.log("✅ Connected to MongoDB Atlas");
+    console.log(" Connected to MongoDB Atlas");
 
     const server = http.createServer(app);
 
@@ -200,10 +206,10 @@ mongoose
       cors: {
         // Socket.io supports REGEX for origins, which is perfect for Cloudflare previews
         origin: [
-            "http://localhost:5173",
-            "http://localhost:3000",
-            "https://text-arcade-africa.pages.dev",
-            /\.text-arcade-africa\.pages\.dev$/  // <-- THIS REGEX ALLOWS ALL PREVIEW SUBDOMAINS
+          "http://localhost:5173",
+          "http://localhost:3000",
+          "https://text-arcade-africa.pages.dev",
+          /\.text-arcade-africa\.pages\.dev$/, // <-- THIS REGEX ALLOWS ALL PREVIEW SUBDOMAINS
         ],
         methods: ["GET", "POST"],
         credentials: true,
@@ -217,13 +223,11 @@ mongoose
 
     io.on("connection", (socket) => {
       console.log("🟢 New WebSocket connection:", socket.id);
-      
+
       socket.on("disconnect", () => console.log("🔴 Disconnected:", socket.id));
     });
 
-    server.listen(PORT, () =>
-      console.log(`🚀 Server running on port ${PORT}`)
-    );
+    server.listen(PORT, () => console.log(` Server running on port ${PORT}`));
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err.message);

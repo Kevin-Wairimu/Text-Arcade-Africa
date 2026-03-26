@@ -32,7 +32,7 @@ const ArticleSchema = new mongoose.Schema(
     slug: { type: String, unique: true, index: true },
     sourceUrl: { type: String, trim: true },
     order: { type: Number, default: 0 },
-    imageLabels: { type: Map, of: String, default: {} },
+    imageLabels: { type: Object, default: {} },
   },
   { timestamps: true }
 );

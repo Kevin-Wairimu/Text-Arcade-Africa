@@ -6,9 +6,9 @@ const connectDB = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log(`✅ MongoDB connected successfully`);
-    console.log(`📦 Connected to DB: ${conn.connection.name}`);
-    console.log(`📂 Collections: ${Object.keys(conn.connection.collections)}`);
+    console.log(`MongoDB connected successfully`);
+    console.log(` Connected to DB: ${conn.connection.name}`);
+    console.log(` Collections: ${Object.keys(conn.connection.collections)}`);
   } catch (error) {
     console.error(`❌ MongoDB connection failed: ${error.message}`);
     process.exit(1);
