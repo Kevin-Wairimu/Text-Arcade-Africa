@@ -142,7 +142,7 @@ export default function ArticleDetails() {
 
     if (youtubeMatch) {
       return (
-        <div className="relative aspect-video w-full rounded-3xl overflow-hidden mb-12 shadow-2xl">
+        <div className="relative aspect-video w-full rounded-2xl overflow-hidden mb-2 shadow-xl">
           <iframe
             className="absolute inset-0 w-full h-full"
             src={`https://www.youtube.com/embed/${youtubeMatch[1]}`}
@@ -161,7 +161,7 @@ export default function ArticleDetails() {
 
     if (vimeoMatch) {
       return (
-        <div className="relative aspect-video w-full rounded-3xl overflow-hidden mb-12 shadow-2xl">
+        <div className="relative aspect-video w-full rounded-2xl overflow-hidden mb-2 shadow-xl">
           <iframe
             className="absolute inset-0 w-full h-full"
             src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
@@ -180,7 +180,7 @@ export default function ArticleDetails() {
       : article.videoUrl;
 
     return (
-      <div className="relative w-full rounded-3xl overflow-hidden mb-12 shadow-2xl bg-black aspect-video">
+      <div className="relative w-full rounded-2xl overflow-hidden mb-2 shadow-xl bg-black aspect-video">
         <video 
           key={videoSrc}
           controls 
@@ -242,7 +242,8 @@ export default function ArticleDetails() {
       const filename = p1.split('/uploads/').pop();
       return `src="${BACKEND_URL}/uploads/${filename}"`;
     })
-    .replace(/<img/g, `<img crossOrigin="anonymous" class="w-full rounded-${isVintage ? 'none' : '3xl'} my-8 shadow-xl border border-taa-primary/5"`);
+    .replace(/<img/g, `<img crossOrigin="anonymous" class="w-full rounded-${isVintage ? 'none' : '3xl'} my-1 shadow-lg border border-taa-primary/5"`);
+
 
   const contentParts = (() => {
     // Normalize line breaks to handle different OS formats and ensure we split by paragraphs
@@ -291,10 +292,10 @@ export default function ArticleDetails() {
         <meta name="twitter:image" content={getAbsoluteImageUrl()} />
       </Helmet>
 
-      <div className="max-w-4xl mx-auto px-6 pt-12">
+      <div className="max-w-4xl mx-auto px-4 pt-8">
         <Link 
           to="/" 
-          className={`inline-flex items-center gap-2 ${isVintage ? 'text-black font-serif border-b border-black' : 'text-taa-primary dark:text-taa-accent font-bold'} mb-8 hover:-translate-x-2 transition-transform`}
+          className={`inline-flex items-center gap-2 ${isVintage ? 'text-black font-serif border-b border-black' : 'text-taa-primary dark:text-taa-accent font-bold'} mb-4 hover:-translate-x-2 transition-transform`}
         >
           <ChevronLeft size={20} /> {isVintage ? 'Back to Publications' : 'Back to Hub'}
         </Link>
@@ -302,7 +303,7 @@ export default function ArticleDetails() {
         <article className={`${isVintage ? 'bg-[#f4ecd8] border-2 border-black/20 shadow-[20px_20px_0px_rgba(0,0,0,0.05)] rounded-none' : 'bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl border border-taa-primary/5'} overflow-hidden`}>
           {/* Header Image */}
           {(article.image || article.images?.[0]) && (
-            <div className={`relative ${isVintage ? 'h-[400px] grayscale' : 'h-[300px] md:h-[600px]'} w-full`}>
+            <div className={`relative ${isVintage ? 'h-[400px] grayscale' : 'h-[250px] md:h-[500px]'} w-full`}>
               <img
                 src={getCleanImageUrl(article.image || article.images?.[0])}
                 alt={article.title}
@@ -339,9 +340,9 @@ export default function ArticleDetails() {
             </div>
           )}
 
-          <div className={`${isVintage ? 'p-10 md:p-20' : 'p-8 md:p-16'}`}>
+          <div className={`${isVintage ? 'p-10 md:p-20' : 'p-4 md:p-8'}`}>
             {/* ... rest of title/author section ... */}
-            <div className={`flex flex-wrap items-center justify-between gap-8 mb-16 pb-10 border-b ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
+            <div className={`flex flex-wrap items-center justify-between gap-8 mb-4 pb-4 border-b ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
               <div className="flex items-center gap-5">
                 <div className={`w-14 h-14 ${isVintage ? 'bg-black rounded-none' : 'rounded-2xl bg-taa-primary'} text-white flex items-center justify-center font-black text-2xl shadow-lg`}>
                   {article.author?.[0] || "T"}
@@ -383,54 +384,13 @@ export default function ArticleDetails() {
             {/* Main Article Content with combined gallery */}
             <div ref={articleRef} className={isVintage ? "font-serif text-black leading-relaxed" : ""}>
               <div 
-                className={`${isVintage ? 'prose-2xl text-black' : 'prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-normal text-justify mb-12 article-content`}
+                className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-tight prose-p:my-0 prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-normal text-justify mb-2 article-content`}
                 dangerouslySetInnerHTML={{ __html: contentParts[0] }}
               />
 
-              {/* Combined Story Delegates Gallery */}
-              {otherImages.length > 0 && (
-                <div className={`my-16 py-12 border-y ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
-                  <h3 className={`text-xl font-black ${isVintage ? 'text-black font-serif italic' : 'text-taa-dark dark:text-white'} mb-6 uppercase tracking-widest flex items-center gap-2`}>
-                    <Sparkles size={18} className={isVintage ? 'text-black' : 'text-taa-primary'} /> Story Delegates & Identities
-                  </h3>
-                  <div className={`grid grid-cols-2 ${otherImages.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-8`}>
-                    {otherImages.map((img, i) => {
-                      const labels = article.imageLabels || {};
-                      const label = labels[img] || 
-                                   Object.entries(labels).find(([key]) => key.includes(img) || img.includes(key))?.[1];
-
-                      return (
-                        <motion.div 
-                          key={i}
-                          whileHover={{ scale: 1.02 }}
-                          className="flex flex-col gap-3"
-                        >
-                          <div 
-                            className={`aspect-square ${isVintage ? 'rounded-none border-2 border-black/10' : 'rounded-2xl border border-taa-primary/10 shadow-md'} overflow-hidden cursor-pointer`}
-                            onClick={() => window.open(getCleanImageUrl(img), '_blank')}
-                          >
-                            <img 
-                              src={getCleanImageUrl(img)} 
-                              className={`w-full h-full object-cover ${isVintage ? 'grayscale' : ''}`} 
-                              alt={label || `Delegate ${i}`} 
-                              crossOrigin="anonymous"
-                            />
-                          </div>
-                          {label && (
-                            <p className={`text-center text-xs md:text-sm font-black uppercase tracking-[0.2em] ${isVintage ? 'text-black font-serif italic' : 'text-taa-primary dark:text-taa-accent'}`}>
-                              {label}
-                            </p>
-                          )}
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
               {contentParts[1] && (
                 <div 
-                  className={`${isVintage ? 'prose-2xl text-black' : 'prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-pre-line text-justify mb-12 article-content`}
+                  className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-tight prose-p:my-0 prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-normal text-justify mb-2 article-content`}
                   dangerouslySetInnerHTML={{ __html: contentParts[1] }}
                 />
               )}
