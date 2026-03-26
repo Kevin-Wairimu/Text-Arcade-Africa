@@ -67,10 +67,18 @@ SkeletonCard.displayName = "SkeletonCard";
 
 const ArticleCard = memo(({ article, index, onReadMore }) => {
   if (!article) return null;
-  const rawImage = article.image || article.images?.[0];
-  const imageUrl = rawImage 
-    ? (rawImage.startsWith('/uploads/') ? `${BACKEND_URL}${rawImage}` : rawImage)
-    : "https://via.placeholder.com/600x400?text=No+Image";
+  
+  const getCleanImageUrl = (url) => {
+    if (!url) return "https://via.placeholder.com/600x400?text=No+Image";
+    if (url.startsWith('data:')) return url;
+    if (url.includes('/uploads/')) {
+      const filename = url.split('/uploads/').pop();
+      return `${BACKEND_URL}/uploads/${filename}`;
+    }
+    return url;
+  };
+
+  const imageUrl = getCleanImageUrl(article.image || article.images?.[0]);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.role === "Admin";
   
@@ -91,6 +99,7 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
           alt={article.title || "Article"}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           loading="lazy"
+          crossOrigin="anonymous"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <div className="absolute top-4 left-4 flex flex-col gap-2">

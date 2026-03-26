@@ -199,13 +199,21 @@ export default function ArticleDetails() {
     );
   };
 
-  const getAbsoluteImageUrl = () => {
-    const img = article.image || article.images?.[0];
+  const getCleanImageUrl = useCallback((url) => {
+    if (!url) return "";
+    if (url.startsWith('data:')) return url;
+    if (url.includes('/uploads/')) {
+      const filename = url.split('/uploads/').pop();
+      return `${BACKEND_URL}/uploads/${filename}`;
+    }
+    return url;
+  }, []);
+
+  const getAbsoluteImageUrl = useCallback(() => {
+    const img = article?.image || article?.images?.[0];
     if (!img) return `${window.location.origin}/logo-icon.svg`;
-    if (img.startsWith('http')) return img;
-    
-    return img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : `${window.location.origin}${img}`;
-  };
+    return getCleanImageUrl(img);
+  }, [article, getCleanImageUrl]);
 
   if (loading) return <ArticleLoader />;
   
@@ -230,8 +238,11 @@ export default function ArticleDetails() {
 
   const formattedContent = (article.content || "")
     .replace(/\n/g, '<br/>')
-    .replace(/src="\/uploads\//g, `src="${BACKEND_URL}/uploads/`)
-    .replace(/<img/g, `<img class="w-full rounded-${isVintage ? 'none' : '3xl'} my-8 shadow-xl border border-taa-primary/5"`);
+    .replace(/src="([^"]*\/uploads\/[^"]*)"/g, (match, p1) => {
+      const filename = p1.split('/uploads/').pop();
+      return `src="${BACKEND_URL}/uploads/${filename}"`;
+    })
+    .replace(/<img/g, `<img crossOrigin="anonymous" class="w-full rounded-${isVintage ? 'none' : '3xl'} my-8 shadow-xl border border-taa-primary/5"`);
 
   const contentParts = (() => {
     // Normalize line breaks to handle different OS formats and ensure we split by paragraphs
@@ -293,7 +304,7 @@ export default function ArticleDetails() {
           {(article.image || article.images?.[0]) && (
             <div className={`relative ${isVintage ? 'h-[400px] grayscale' : 'h-[300px] md:h-[600px]'} w-full`}>
               <img
-                src={(article.image || article.images?.[0]).startsWith('/uploads/') ? `${BACKEND_URL}${article.image || article.images?.[0]}` : (article.image || article.images?.[0])}
+                src={getCleanImageUrl(article.image || article.images?.[0])}
                 alt={article.title}
                 className="w-full h-full object-cover"
                 crossOrigin="anonymous"
@@ -329,22 +340,7 @@ export default function ArticleDetails() {
           )}
 
           <div className={`${isVintage ? 'p-10 md:p-20' : 'p-8 md:p-16'}`}>
-            {!(article.image || article.images?.[0]) && (
-              <div className="mb-12">
-                <div className="flex items-center gap-3 mb-6">
-                  <span className={`${isVintage ? 'bg-black text-white px-3 py-1 font-serif italic' : 'px-4 py-1.5 bg-taa-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full'}`}>
-                    {article.category || "Insight"}
-                  </span>
-                  <span className={`${isVintage ? 'text-black/60 font-serif italic' : 'text-taa-primary/60 dark:text-white/40 text-[10px] font-black uppercase tracking-widest'}`}>
-                    {readingTime} MIN READ
-                  </span>
-                </div>
-                <h1 className={`${isVintage ? 'text-4xl md:text-7xl font-serif font-black text-black leading-tight border-b-2 border-black/10 pb-8' : 'text-4xl md:text-7xl font-black text-taa-dark dark:text-white leading-[1.1] tracking-tight'}`}>
-                  {article.title}
-                </h1>
-              </div>
-            )}
-
+            {/* ... rest of title/author section ... */}
             <div className={`flex flex-wrap items-center justify-between gap-8 mb-16 pb-10 border-b ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
               <div className="flex items-center gap-5">
                 <div className={`w-14 h-14 ${isVintage ? 'bg-black rounded-none' : 'rounded-2xl bg-taa-primary'} text-white flex items-center justify-center font-black text-2xl shadow-lg`}>
@@ -387,19 +383,18 @@ export default function ArticleDetails() {
             {/* Main Article Content with combined gallery */}
             <div ref={articleRef} className={isVintage ? "font-serif text-black leading-relaxed" : ""}>
               <div 
-                className={`${isVintage ? 'prose-2xl text-black' : 'prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-pre-line text-justify mb-12 article-content`}
+                className={`${isVintage ? 'prose-2xl text-black' : 'prose prose-xl max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-[1.8] prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-normal text-justify mb-12 article-content`}
                 dangerouslySetInnerHTML={{ __html: contentParts[0] }}
               />
 
               {/* Combined Story Delegates Gallery */}
-              {/* {otherImages.length > 0 && (
+              {otherImages.length > 0 && (
                 <div className={`my-16 py-12 border-y ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
                   <h3 className={`text-xl font-black ${isVintage ? 'text-black font-serif italic' : 'text-taa-dark dark:text-white'} mb-6 uppercase tracking-widest flex items-center gap-2`}>
                     <Sparkles size={18} className={isVintage ? 'text-black' : 'text-taa-primary'} /> Story Delegates & Identities
                   </h3>
                   <div className={`grid grid-cols-2 ${otherImages.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-8`}>
                     {otherImages.map((img, i) => {
-                      // Robust label lookup: direct or case-insensitive or partial
                       const labels = article.imageLabels || {};
                       const label = labels[img] || 
                                    Object.entries(labels).find(([key]) => key.includes(img) || img.includes(key))?.[1];
@@ -412,9 +407,14 @@ export default function ArticleDetails() {
                         >
                           <div 
                             className={`aspect-square ${isVintage ? 'rounded-none border-2 border-black/10' : 'rounded-2xl border border-taa-primary/10 shadow-md'} overflow-hidden cursor-pointer`}
-                            onClick={() => window.open(img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img, '_blank')}
+                            onClick={() => window.open(getCleanImageUrl(img), '_blank')}
                           >
-                            <img src={img.startsWith('/uploads/') ? `${BACKEND_URL}${img}` : img} className={`w-full h-full object-cover ${isVintage ? 'grayscale' : ''}`} alt={label || `Delegate ${i}`} />
+                            <img 
+                              src={getCleanImageUrl(img)} 
+                              className={`w-full h-full object-cover ${isVintage ? 'grayscale' : ''}`} 
+                              alt={label || `Delegate ${i}`} 
+                              crossOrigin="anonymous"
+                            />
                           </div>
                           {label && (
                             <p className={`text-center text-xs md:text-sm font-black uppercase tracking-[0.2em] ${isVintage ? 'text-black font-serif italic' : 'text-taa-primary dark:text-taa-accent'}`}>
@@ -426,7 +426,7 @@ export default function ArticleDetails() {
                     })}
                   </div>
                 </div>
-              )} */}
+              )}
 
               {contentParts[1] && (
                 <div 
@@ -466,7 +466,12 @@ export default function ArticleDetails() {
                   className="glass-card group p-6 rounded-[2rem] border border-taa-primary/5 hover:border-taa-primary/20 transition-all"
                 >
                   <div className="aspect-video rounded-2xl overflow-hidden mb-6">
-                    <img src={(rel.image || rel.images?.[0])?.startsWith('/uploads/') ? `${BACKEND_URL}${rel.image || rel.images?.[0]}` : (rel.image || rel.images?.[0])} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={rel.title} />
+                    <img 
+                      src={getCleanImageUrl(rel.image || rel.images?.[0])} 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      alt={rel.title} 
+                      crossOrigin="anonymous"
+                    />
                   </div>
                   <h4 className="font-black text-xl text-taa-dark dark:text-white line-clamp-2 group-hover:text-taa-primary transition-colors">{rel.title}</h4>
                 </Link>
