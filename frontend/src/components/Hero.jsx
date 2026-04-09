@@ -133,3 +133,4 @@ const Hero = ({ backgroundImages = [] }) => {
 };
 
 export default Hero;
+

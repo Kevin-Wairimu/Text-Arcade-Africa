@@ -13,3 +13,4 @@ export default function ScrollToTop() {
   // This component renders nothing to the screen.
   return null;
 }
+

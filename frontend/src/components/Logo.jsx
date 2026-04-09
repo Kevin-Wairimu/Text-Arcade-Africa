@@ -53,3 +53,4 @@ export default function Logo({ mode = 'full', className = '', as: Component = Li
     </Component>
   );
 }
+

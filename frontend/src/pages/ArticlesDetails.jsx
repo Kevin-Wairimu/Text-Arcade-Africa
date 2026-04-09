@@ -202,7 +202,7 @@ export default function ArticleDetails() {
   const getCleanImageUrl = useCallback((url) => {
     if (!url) return "";
     if (url.startsWith('data:')) return url;
-    if (url.includes('/uploads/')) {
+    if (url.includes('/uploads/') && !url.startsWith('http')) {
       const filename = url.split('/uploads/').pop();
       return `${BACKEND_URL}/uploads/${filename}`;
     }
@@ -248,6 +248,8 @@ export default function ArticleDetails() {
     })
     .join('')
     .replace(/src="([^"]*\/uploads\/[^"]*)"/g, (match, p1) => {
+      // Only prefix with BACKEND_URL if it's a relative path
+      if (p1.startsWith('http')) return match;
       const filename = p1.split('/uploads/').pop();
       return `src="${BACKEND_URL}/uploads/${filename}"`;
     })
@@ -443,3 +445,4 @@ export default function ArticleDetails() {
     </main>
   );
 }
+

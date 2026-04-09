@@ -27,3 +27,4 @@ export const AlertProvider = ({ children }) => {
 export const useAlert = () => {
   return useContext(AlertContext);
 };
+

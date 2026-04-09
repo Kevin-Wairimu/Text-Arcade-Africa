@@ -71,7 +71,7 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
   const getCleanImageUrl = (url) => {
     if (!url) return "https://via.placeholder.com/600x400?text=No+Image";
     if (url.startsWith('data:')) return url;
-    if (url.includes('/uploads/')) {
+    if (url.includes('/uploads/') && !url.startsWith('http')) {
       const filename = url.split('/uploads/').pop();
       return `${BACKEND_URL}/uploads/${filename}`;
     }
@@ -412,3 +412,4 @@ export default function Home() {
     </div>
   );
 }
+
