@@ -97,11 +97,11 @@ function tokensToHtml(content, imageLabels = {}) {
     // Sidebar caption (assigned caption) is the master source of truth
     const finalLabel = imageLabels[url] || tokenLabel || "Image caption";
     
-    return `\n<figure class="my-12 group">
-  <div class="rounded-[2rem] overflow-hidden border-4 border-white dark:border-white/5 shadow-2xl relative">
-    <img src="${fullUrl}" class="w-full h-auto object-cover" />
+    return `\n<figure className="my-6 group">
+  <div className="rounded-3xl overflow-hidden border-4 border-white dark:border-white/5 shadow-2xl relative">
+    <img src="${fullUrl}" className="w-full h-auto object-cover" />
   </div>
-  <figcaption class="mt-4 text-center text-xs font-bold uppercase tracking-[0.3em] text-taa-primary/60 dark:text-white/40">
+  <figcaption className="mt-4 text-center text-xs font-bold uppercase tracking-[0.3em] text-taa-primary/60 dark:text-white/40">
     ${finalLabel}
   </figcaption>
 </figure>\n`;

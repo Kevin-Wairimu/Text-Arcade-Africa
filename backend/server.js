@@ -29,7 +29,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:4173",
   "https://text-arcade-africa.pages.dev",
-  "https://text-arcade-africa-0dj4.onrender.com",
+  "https://text-arcade-africa.onrender.com",
 ];
 
 const isOriginAllowed = (origin) => {
@@ -45,7 +45,7 @@ const corsOptions = {
     if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
-      console.warn("⚠️ Blocked CORS from:", origin);
+      console.warn(" Blocked CORS from:", origin);
       callback(new Error(`CORS policy blocked origin: ${origin}`));
     }
   },
@@ -80,11 +80,11 @@ app.use("/api/settings", settingsRoutes);
 // ✅ HEALTH & WARMUP ENDPOINTS
 // ================================
 app.get("/api/debug", (req, res) =>
-  res.json({ message: "API is live ✅", env: process.env.NODE_ENV })
+  res.json({ message: "API is live ", env: process.env.NODE_ENV }),
 );
 
 app.get("/api/ping", (req, res) =>
-  res.json({ status: "awake", timestamp: new Date().toISOString() })
+  res.json({ status: "awake", timestamp: new Date().toISOString() }),
 );
 
 app.get("/api/health", (req, res) =>
@@ -93,13 +93,15 @@ app.get("/api/health", (req, res) =>
     message: "Backend ready",
     uptime: Math.round(process.uptime()),
     db: "supabase",
-  })
+  }),
 );
 
 app.get("/api/warmup", async (req, res) => {
   try {
     // Simple query to warm up Supabase
-    await supabase.from('articles').select('id', { count: 'exact', head: true });
+    await supabase
+      .from("articles")
+      .select("id", { count: "exact", head: true });
     res.json({ warmed: true, message: "Backend & Supabase warmed ✅" });
   } catch (err) {
     res.status(500).json({ warmed: false, error: err.message });
@@ -115,7 +117,7 @@ const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
 
 const callCloudflareAPI = async (url) => {
   if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
-    throw new Error("⚠️ Cloudflare credentials not set in .env");
+    throw new Error(" Cloudflare credentials not set in .env");
   }
   const res = await axios.get(`${CF_API_BASE}${url}`, {
     headers: {
@@ -129,9 +131,13 @@ const callCloudflareAPI = async (url) => {
 app.get("/api/cloudflare/access/apps", async (req, res) => {
   try {
     if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
-      return res.status(200).json({ warning: "CF credentials not set.", data: [] });
+      return res
+        .status(200)
+        .json({ warning: "CF credentials not set.", data: [] });
     }
-    const data = await callCloudflareAPI(`/accounts/${CF_ACCOUNT_ID}/access/apps`);
+    const data = await callCloudflareAPI(
+      `/accounts/${CF_ACCOUNT_ID}/access/apps`,
+    );
     res.json(data);
   } catch (err) {
     console.error("CF Access Apps error:", err.message);
@@ -142,9 +148,13 @@ app.get("/api/cloudflare/access/apps", async (req, res) => {
 app.get("/api/cloudflare/access/organizations", async (req, res) => {
   try {
     if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
-      return res.status(200).json({ warning: "CF credentials not set.", data: [] });
+      return res
+        .status(200)
+        .json({ warning: "CF credentials not set.", data: [] });
     }
-    const data = await callCloudflareAPI(`/accounts/${CF_ACCOUNT_ID}/access/organizations`);
+    const data = await callCloudflareAPI(
+      `/accounts/${CF_ACCOUNT_ID}/access/organizations`,
+    );
     res.json(data);
   } catch (err) {
     console.error("CF Access Organizations error:", err.message);
@@ -156,14 +166,14 @@ app.get("/api/cloudflare/access/organizations", async (req, res) => {
 // ✅ 404 HANDLER
 // ================================
 app.use((req, res) =>
-  res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` })
+  res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` }),
 );
 
 // ================================
 // ✅ GLOBAL ERROR HANDLER
 // ================================
 app.use((err, req, res, next) => {
-  console.error("🔥 Server error:", err.message);
+  console.error(" Server error:", err.message);
   const isProd = process.env.NODE_ENV === "production";
   res.status(err.status || 500).json({
     error: "Internal Server Error",
@@ -181,8 +191,8 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
 
 const startServer = async () => {
   try {
-    console.log("✅ Supabase client initialized");
-    
+    console.log(" Supabase client initialized");
+
     const server = http.createServer(app);
 
     // ================================
@@ -206,15 +216,16 @@ const startServer = async () => {
     });
 
     io.on("connection", (socket) => {
-      console.log("🟢 Socket connected:", socket.id);
-      socket.on("disconnect", () => console.log("🔴 Socket disconnected:", socket.id));
+      console.log(" Socket connected:", socket.id);
+      socket.on("disconnect", () =>
+        console.log(" Socket disconnected:", socket.id),
+      );
     });
 
     server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌐 ENV: ${process.env.NODE_ENV || "development"}`);
+      console.log(` Server running on port ${PORT}`);
+      console.log(` ENV: ${process.env.NODE_ENV || "development"}`);
     });
-
   } catch (err) {
     console.error("❌ Startup failed:", err.message);
     process.exit(1);

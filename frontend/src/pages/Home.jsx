@@ -143,7 +143,7 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
         })()}
         
         <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3 mb-6 flex-grow leading-relaxed">
-          {article.content?.replace(/<[^>]*>/g, '').slice(0, 150)}...
+          {article.content}...
         </p>
         
         <div className="flex items-center text-taa-primary dark:text-taa-accent font-bold text-sm">

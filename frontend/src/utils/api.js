@@ -8,7 +8,7 @@ const hostname = window.location.hostname;
 const isProduction = !["localhost", "127.0.0.1"].includes(hostname);
 
 export const BACKEND_URL = isProduction
-  ? "https://text-arcade-africa-0dj4.onrender.com"
+  ? "https://text-arcade-africa.onrender.com"
   : "http://localhost:5000";
 
 // ================================
@@ -16,7 +16,7 @@ export const BACKEND_URL = isProduction
 // ================================
 const API = axios.create({
   baseURL: `${BACKEND_URL}/api`,
-  timeout: 30000,
+  timeout: 60000,
   // NOTE: withCredentials only needed if using cookies/sessions.
   // Since you use Bearer tokens in Authorization header, this is false.
   // Set to true only if you add cookie-based auth later.

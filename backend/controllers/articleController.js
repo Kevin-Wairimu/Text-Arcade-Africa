@@ -58,10 +58,17 @@ exports.getAllArticles = async (req, res) => {
 
     if (error) throw error;
 
-    const optimizedArticles = articles.map(article => ({
-      ...article,
-      content: article.content ? article.content.substring(0, 200) : ""
-    }));
+    const optimizedArticles = articles.map(article => {
+      // Create a clean text snippet by stripping HTML tags
+      const cleanText = article.content 
+        ? article.content.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim()
+        : "";
+        
+      return {
+        ...article,
+        content: cleanText.substring(0, 200)
+      };
+    });
 
     res.json({ articles: optimizedArticles, total, page, limit, hasMore: (page * limit) < total });
   } catch (err) {

@@ -237,34 +237,33 @@ export default function ArticleDetails() {
   const otherImages = article.images ? article.images.filter(img => img !== coverImage) : [];
 
   const formattedContent = (article.content || "")
-    .replace(/\n\s*\n/g, '<br/>') // Collapse double newlines to a single break
-    .replace(/\n/g, '<br/>')
+    .replace(/my-12/g, 'my-6') // Fix existing large margins in saved HTML
+    .split(/\n\s*\n/) // Split by double newlines
+    .map(para => {
+      // If it's already a figure or other HTML block, don't wrap in <p>
+      if (para.trim().startsWith('<figure') || para.trim().startsWith('<div')) {
+        return para;
+      }
+      return `<p>${para.replace(/\n/g, '<br/>')}</p>`;
+    })
+    .join('')
     .replace(/src="([^"]*\/uploads\/[^"]*)"/g, (match, p1) => {
       const filename = p1.split('/uploads/').pop();
       return `src="${BACKEND_URL}/uploads/${filename}"`;
     })
-    .replace(/<img/g, `<img crossOrigin="anonymous" class="w-full rounded-${isVintage ? 'none' : '3xl'} my-1 shadow-lg border border-taa-primary/5"`);
+    .replace(/<img/g, `<img crossOrigin="anonymous" className="w-full rounded-${isVintage ? 'none' : '3xl'} my-4 shadow-lg border border-taa-primary/5"`);
 
 
   const contentParts = (() => {
     // Normalize line breaks to handle different OS formats and ensure we split by paragraphs
-    const normalizedContent = formattedContent.replace(/\r\n/g, '\n');
-    const doubleBreaks = normalizedContent.split('<br/><br/>');
+    const normalizedContent = formattedContent;
+    const pTags = normalizedContent.split('</p>');
     
-    if (doubleBreaks.length >= 2) {
-      const midpoint = Math.floor(doubleBreaks.length / 2);
+    if (pTags.length >= 4) {
+      const midpoint = Math.floor(pTags.length / 2);
       return [
-        doubleBreaks.slice(0, midpoint).join('<br/><br/>'),
-        doubleBreaks.slice(midpoint).join('<br/><br/>')
-      ];
-    }
-    
-    const singleBreaks = normalizedContent.split('<br/>');
-    if (singleBreaks.length >= 4) {
-      const midpoint = Math.floor(singleBreaks.length / 2);
-      return [
-        singleBreaks.slice(0, midpoint).join('<br/>'),
-        singleBreaks.slice(midpoint).join('<br/>')
+        pTags.slice(0, midpoint).join('</p>') + '</p>',
+        pTags.slice(midpoint).join('</p>')
       ];
     }
 
@@ -385,13 +384,13 @@ export default function ArticleDetails() {
             {/* Main Article Content with combined gallery */}
             <div ref={articleRef} className={isVintage ? "font-serif text-black leading-relaxed" : ""}>
               <div 
-                className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-relaxed prose-p:mb-4 prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-normal text-justify mb-0 article-content`}
+                className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-relaxed prose-p:mb-8 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-img:my-4 prose-figure:my-6'} whitespace-normal text-justify mb-0 article-content`}
                 dangerouslySetInnerHTML={{ __html: contentParts[0] }}
               />
 
               {contentParts[1] && (
                 <div 
-                  className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-relaxed prose-p:mb-4 prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-normal text-justify mb-0 article-content`}
+                  className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-relaxed prose-p:mb-8 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-img:my-4 prose-figure:my-6'} whitespace-normal text-justify mb-0 article-content`}
                   dangerouslySetInnerHTML={{ __html: contentParts[1] }}
                 />
               )}
