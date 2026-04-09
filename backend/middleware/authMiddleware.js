@@ -1,6 +1,6 @@
 // middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
-const User = require("../models/User");
+const supabase = require("../config/supabase");
 
 // 1. OPTIONAL AUTH – logs **email (role)** for EVERY request
 const authenticateToken = async (req, res, next) => {
@@ -9,26 +9,27 @@ const authenticateToken = async (req, res, next) => {
 
   if (!token) {
     req.user = null;
-    console.log(`API ${req.method} ${req.originalUrl} called by user: unknown`);
     return next();
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your_default_secret_key");
+    
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, role, suspended')
+      .eq('id', decoded.id)
+      .single();
 
-    if (!user) {
+    if (error || !user) {
       req.user = null;
-      console.log(`API ${req.method} ${req.originalUrl} called by user: unknown (not found)`);
       return next();
     }
 
     req.user = user;
-    console.log(`API ${req.method} ${req.originalUrl} called by user: ${user.email} (${user.role})`);
     next();
   } catch (err) {
     req.user = null;
-    console.log(`API ${req.method} ${req.originalUrl} called by user: unknown (invalid token)`);
     next();
   }
 };
@@ -41,9 +42,15 @@ const protect = async (req, res, next) => {
   if (!token) return res.status(401).json({ message: "Not authorized, no token" });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
-    if (!user) return res.status(401).json({ message: "User not found" });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your_default_secret_key");
+    
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, role, suspended')
+      .eq('id', decoded.id)
+      .single();
+
+    if (error || !user) return res.status(401).json({ message: "User not found" });
     if (user.suspended) return res.status(403).json({ message: "Account suspended." });
 
     req.user = user;

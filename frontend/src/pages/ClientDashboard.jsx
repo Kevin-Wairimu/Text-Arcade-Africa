@@ -139,7 +139,7 @@ export default function ClientDashboard() {
               {filteredArticles.map((article, i) => (
                 <motion.div
                   layout
-                  key={article._id}
+                  key={article.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
@@ -162,7 +162,7 @@ export default function ClientDashboard() {
                       <div className="p-8 flex flex-col flex-1">
                         <div className="flex items-center gap-2 text-xs font-bold text-taa-primary mb-4 uppercase tracking-widest">
                           <Clock size={14} />
-                          {new Date(article.publishedAt || article.createdAt).toLocaleDateString()}
+                          {new Date(article.publishedAt || article.created_at).toLocaleDateString()}
                         </div>
                         <h3 className="text-xl font-black text-taa-dark dark:text-white mb-1 line-clamp-2 leading-tight group-hover:text-taa-primary transition-colors">
                           {article.title}
@@ -183,7 +183,7 @@ export default function ClientDashboard() {
                           {article.content?.replace(/<[^>]*>/g, '').substring(0, 150)}...
                         </p>
                         <Link 
-                          to={`/article/${article._id}`}
+                          to={`/article/${article.id}`}
                           className="inline-flex items-center gap-2 text-taa-primary font-black text-sm group/btn"
                         >
                           EXPLORE STORY 
@@ -206,7 +206,7 @@ export default function ClientDashboard() {
                         <p className="text-gray-500 dark:text-gray-400 text-sm font-medium line-clamp-2 mb-4">
                           {article.content?.replace(/<[^>]*>/g, '').substring(0, 200)}...
                         </p>
-                        <Link to={`/article/${article._id}`} className="font-black text-taa-primary text-sm flex items-center gap-1">
+                        <Link to={`/article/${article.id}`} className="font-black text-taa-primary text-sm flex items-center gap-1">
                           READ ARTICLE <ArrowRight size={16} />
                         </Link>
                       </div>

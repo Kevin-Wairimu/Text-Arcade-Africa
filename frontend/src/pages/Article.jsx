@@ -263,7 +263,7 @@ export default function Admin() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {articles.map((a) => (
                 <motion.div
-                  key={a._id}
+                  key={a.id}
                   className="bg-[#0b2818]/70 border border-[#77BFA1]/30 rounded-2xl overflow-hidden p-4 flex flex-col"
                 >
                   <h3 className="font-semibold text-white mb-2">{a.title}</h3>
@@ -272,7 +272,7 @@ export default function Admin() {
                     <div className="flex gap-4">
                       <button
                         onClick={() => {
-                          setEditingArticle(a._id);
+                          setEditingArticle(a.id);
                           setForm({
                             title: a.title || "",
                             content: a.content || "",
@@ -288,7 +288,7 @@ export default function Admin() {
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(a._id)}
+                        onClick={() => handleDelete(a.id)}
                         className="text-red-500 text-sm"
                       >
                         Delete

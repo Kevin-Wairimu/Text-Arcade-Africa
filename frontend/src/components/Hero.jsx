@@ -70,12 +70,12 @@ const Hero = ({ backgroundImages = [] }) => {
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-white text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter drop-shadow-2xl leading-[0.9]"
+          className="text-white text-3xl xs:text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter drop-shadow-2xl leading-[0.95]"
         >
           Text Africa Arcade
         </motion.h1>
 
-        <div className="h-12 sm:h-16 flex items-center justify-center overflow-hidden mt-4 md:mt-6">
+        <div className="h-10 sm:h-16 flex items-center justify-center overflow-hidden mt-2 md:mt-6">
           <AnimatePresence mode="wait">
             <motion.h2
               key={sloganIndex}
@@ -83,7 +83,7 @@ const Hero = ({ backgroundImages = [] }) => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.5 }}
-              className="text-taa-accent text-lg sm:text-2xl md:text-3xl font-bold tracking-wide uppercase px-4"
+              className="text-taa-accent text-base sm:text-2xl md:text-3xl font-bold tracking-wide uppercase px-4"
             >
               {slogans[sloganIndex]}
             </motion.h2>
@@ -94,7 +94,7 @@ const Hero = ({ backgroundImages = [] }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 1 }}
-          className="mt-6 md:mt-8 text-gray-200 text-sm sm:text-lg md:text-xl max-w-2xl leading-relaxed font-medium px-4"
+          className="mt-4 md:mt-8 text-gray-200 text-xs sm:text-lg md:text-xl max-w-2xl leading-relaxed font-medium px-6"
         >
           Helping media organizations adapt and grow in the
           digital era through technology, data, and design thinking.
@@ -104,14 +104,14 @@ const Hero = ({ backgroundImages = [] }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="mt-10 md:mt-12 flex flex-col sm:flex-row gap-4 sm:gap-6 w-full sm:w-auto px-10 sm:px-0"
+          className="mt-8 md:mt-12 flex flex-col sm:flex-row gap-4 sm:gap-6 w-full sm:w-auto px-12 sm:px-0"
         >
-          <a href="/services" className="btn-primary w-full sm:w-auto text-center">
+          <a href="/services" className="btn-primary w-full sm:w-auto text-center py-4 px-10">
             Our Services
           </a>
           <a
             href="/contact"
-            className="px-8 py-3 md:py-4 border-2 border-white/30 backdrop-blur-md text-white text-sm md:text-lg font-bold rounded-xl hover:bg-white/10 transition-all text-center"
+            className="px-10 py-4 border-2 border-white/30 backdrop-blur-md text-white text-sm md:text-lg font-bold rounded-xl hover:bg-white/10 transition-all text-center"
           >
             Contact Us
           </a>

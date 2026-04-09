@@ -1,11 +1,16 @@
 # Dependencies
 node_modules/
+dist/
+.env*
+!.env.example
 
 # Caches
 .cache/
+.netlify/
+.sfdx/
+debug.log
 
-# Environment variables
-.env
-
-# Local Netlify folder
-.netlify
+# Uploads
+backend/uploads/
+!backend/uploads/.gitkeep
+backend/server_output.txt

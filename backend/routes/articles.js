@@ -3,7 +3,7 @@ const router = express.Router();
 const PDFDocument = require("pdfkit");
 const axios = require("axios");
 const articleController = require("../controllers/articleController");
-const Article = require("../models/Article");
+const supabase = require("../config/supabase");
 const { authenticateToken, protect, admin } = require("../middleware/authMiddleware");
 
 console.log("SERVER: Setting up article routes...");
@@ -21,8 +21,13 @@ router.get("/:id", authenticateToken, articleController.getArticleById);
 // --- 🆕 NEW: Download article as PDF ---
 router.get("/:id/pdf", authenticateToken, async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id);
-    if (!article) return res.status(404).json({ error: "Article not found" });
+    const { data: article, error } = await supabase
+      .from('articles')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !article) return res.status(404).json({ error: "Article not found" });
 
     // Initialize PDF
     const doc = new PDFDocument({ margin: 50 });
@@ -46,7 +51,7 @@ router.get("/:id/pdf", authenticateToken, async (req, res) => {
       .fillColor("#555")
       .text(
         `By ${article.author || "Text Africa Arcade"} • ${new Date(
-          article.createdAt
+          article.created_at
         ).toLocaleDateString("en-US", {
           month: "long",
           day: "numeric",

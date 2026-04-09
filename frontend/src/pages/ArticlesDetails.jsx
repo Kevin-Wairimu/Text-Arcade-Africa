@@ -62,7 +62,7 @@ export default function ArticleDetails() {
 
       // Fetch related articles (same category)
       const relatedRes = await API.get(`/articles?category=${currentArticle.category}&limit=3`);
-      setRelatedArticles(relatedRes.data.articles.filter(a => a._id !== currentArticle._id));
+      setRelatedArticles(relatedRes.data.articles.filter(a => a.id !== currentArticle.id));
     } catch (err) {
       setError("Failed to load the article. It might have been moved or deleted.");
     } finally {
@@ -83,7 +83,7 @@ export default function ArticleDetails() {
   }, [article]);
 
   const getArticleLink = useCallback(() => {
-    return article?.link || `${window.location.origin}/article/${article?.slug || article?._id || identifier}`;
+    return article?.link || `${window.location.origin}/article/${article?.slug || article?.id || identifier}`;
   }, [article, identifier]);
 
   const handleCopy = useCallback(() => {
@@ -237,6 +237,7 @@ export default function ArticleDetails() {
   const otherImages = article.images ? article.images.filter(img => img !== coverImage) : [];
 
   const formattedContent = (article.content || "")
+    .replace(/\n\s*\n/g, '<br/>') // Collapse double newlines to a single break
     .replace(/\n/g, '<br/>')
     .replace(/src="([^"]*\/uploads\/[^"]*)"/g, (match, p1) => {
       const filename = p1.split('/uploads/').pop();
@@ -321,7 +322,7 @@ export default function ArticleDetails() {
                     {readingTime} MIN READ
                   </span>
                 </div>
-                <h1 className={`${isVintage ? 'text-4xl md:text-6xl font-serif font-black text-black leading-tight border-l-4 border-black pl-6' : 'text-3xl md:text-6xl font-black text-white leading-[1.1] drop-shadow-2xl'}`}>
+                <h1 className={`${isVintage ? 'text-3xl sm:text-4xl md:text-6xl font-serif font-black text-black leading-tight border-l-4 border-black pl-4 sm:pl-6' : 'text-2xl sm:text-3xl md:text-6xl font-black text-white leading-[1.15] drop-shadow-2xl'}`}>
                   {article.title}
                 </h1>
                 {(() => {
@@ -342,7 +343,7 @@ export default function ArticleDetails() {
 
           <div className={`${isVintage ? 'p-10 md:p-20' : 'p-4 md:p-8'}`}>
             {/* ... rest of title/author section ... */}
-            <div className={`flex flex-wrap items-center justify-between gap-8 mb-4 pb-4 border-b ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
+            <div className={`flex flex-wrap items-center justify-between gap-8 mb-1 pb-4 border-b ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
               <div className="flex items-center gap-5">
                 <div className={`w-14 h-14 ${isVintage ? 'bg-black rounded-none' : 'rounded-2xl bg-taa-primary'} text-white flex items-center justify-center font-black text-2xl shadow-lg`}>
                   {article.author?.[0] || "T"}
@@ -352,7 +353,7 @@ export default function ArticleDetails() {
                     {article.author || "Text Africa Arcade"}
                   </p>
                   <p className={`text-xs ${isVintage ? 'text-black/60 font-serif italic' : 'text-gray-500 font-bold uppercase tracking-widest'}`}>
-                    {new Date(article.createdAt).toLocaleDateString("en-US", {
+                    {new Date(article.created_at).toLocaleDateString("en-US", {
                       month: "long",
                       day: "numeric",
                       year: "numeric",
@@ -384,13 +385,13 @@ export default function ArticleDetails() {
             {/* Main Article Content with combined gallery */}
             <div ref={articleRef} className={isVintage ? "font-serif text-black leading-relaxed" : ""}>
               <div 
-                className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-tight prose-p:my-0 prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-normal text-justify mb-2 article-content`}
+                className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-relaxed prose-p:mb-4 prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-normal text-justify mb-0 article-content`}
                 dangerouslySetInnerHTML={{ __html: contentParts[0] }}
               />
 
               {contentParts[1] && (
                 <div 
-                  className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-tight prose-p:my-0 prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-normal text-justify mb-2 article-content`}
+                  className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-relaxed prose-p:mb-4 prose-p:text-gray-700 dark:prose-p:text-gray-300'} whitespace-normal text-justify mb-0 article-content`}
                   dangerouslySetInnerHTML={{ __html: contentParts[1] }}
                 />
               )}
@@ -421,8 +422,8 @@ export default function ArticleDetails() {
             <div className="grid md:grid-cols-2 gap-8">
               {relatedArticles.map((rel) => (
                 <Link 
-                  key={rel._id} 
-                  to={`/article/${rel.slug || rel._id}`}
+                  key={rel.id} 
+                  to={`/article/${rel.slug || rel.id}`}
                   className="glass-card group p-6 rounded-[2rem] border border-taa-primary/5 hover:border-taa-primary/20 transition-all"
                 >
                   <div className="aspect-video rounded-2xl overflow-hidden mb-6">

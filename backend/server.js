@@ -2,10 +2,10 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const mongoose = require("mongoose");
 const http = require("http");
 const { Server } = require("socket.io");
 const axios = require("axios");
+const supabase = require("./config/supabase");
 
 // ================================
 // ROUTES IMPORTS
@@ -22,51 +22,44 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ================================
-// ✅ DYNAMIC CORS CONFIGURATION
+// ✅ ALLOWED ORIGINS
 // ================================
-// This helper checks if the origin is allowed
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:4173",
+  "https://text-arcade-africa.pages.dev",
+  "https://text-arcade-africa-0dj4.onrender.com",
+];
+
 const isOriginAllowed = (origin) => {
-  // Allow requests with no origin (like mobile apps or curl)
-  if (!origin) return true;
-
-  // Allow Localhost
+  if (!origin) return true; // allow server-to-server / curl / Postman
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
   if (origin.startsWith("http://localhost")) return true;
-
-  // Allow Main Production Site
-  if (origin === "https://text-arcade-africa.pages.dev") return true;
-
-  // ✅ FIX: Allow ANY Cloudflare Preview URL (subdomains)
-  // This fixes the error: "blocked by CORS policy... origin 'https://43366f51...'"
   if (origin.endsWith(".text-arcade-africa.pages.dev")) return true;
-
-  // Allow Render Backend (self)
-  if (origin === "https://text-arcade-africa-0dj4.onrender.com") return true;
-
   return false;
 };
 
-// ================================
-// ✅ Express CORS Middleware
-// ================================
 const corsOptions = {
   origin: (origin, callback) => {
     if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
-      console.warn("Blocked CORS request from:", origin);
-      callback(new Error("Not allowed by CORS"));
+      console.warn("⚠️ Blocked CORS from:", origin);
+      callback(new Error(`CORS policy blocked origin: ${origin}`));
     }
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  optionsSuccessStatus: 200, // fixes IE11 preflight issues
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // Handle preflight requests explicitly
+app.options("*", cors(corsOptions)); // handle all preflight requests
 
 // ================================
-// ✅ Middleware
+// ✅ MIDDLEWARE
 // ================================
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -84,24 +77,37 @@ app.use("/api/users", userRoutes);
 app.use("/api/settings", settingsRoutes);
 
 // ================================
-// ✅ Health & Warmup Endpoints
+// ✅ HEALTH & WARMUP ENDPOINTS
 // ================================
-app.get("/api/debug", (req, res) => res.json({ message: "API is live ✅" }));
-app.get("/api/ping", (req, res) => res.json({ status: "awake" }));
-app.get("/api/health", (req, res) =>
-  res.json({ ok: true, message: "Backend ready", uptime: process.uptime() }),
+app.get("/api/debug", (req, res) =>
+  res.json({ message: "API is live ✅", env: process.env.NODE_ENV })
 );
+
+app.get("/api/ping", (req, res) =>
+  res.json({ status: "awake", timestamp: new Date().toISOString() })
+);
+
+app.get("/api/health", (req, res) =>
+  res.json({
+    ok: true,
+    message: "Backend ready",
+    uptime: Math.round(process.uptime()),
+    db: "supabase",
+  })
+);
+
 app.get("/api/warmup", async (req, res) => {
   try {
-    await mongoose.connection.db.admin().ping();
-    res.json({ warmed: true, message: "Backend warmed" });
+    // Simple query to warm up Supabase
+    await supabase.from('articles').select('id', { count: 'exact', head: true });
+    res.json({ warmed: true, message: "Backend & Supabase warmed ✅" });
   } catch (err) {
-    res.json({ warmed: false, error: err.message });
+    res.status(500).json({ warmed: false, error: err.message });
   }
 });
 
 // ================================
-// ✅ Cloudflare API Proxy (Safe)
+// ✅ CLOUDFLARE API PROXY
 // ================================
 const CF_API_BASE = "https://api.cloudflare.com/client/v4";
 const CF_API_TOKEN = process.env.CF_API_TOKEN;
@@ -123,18 +129,12 @@ const callCloudflareAPI = async (url) => {
 app.get("/api/cloudflare/access/apps", async (req, res) => {
   try {
     if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
-      return res.status(200).json({
-        warning:
-          "CF_API_TOKEN or CF_ACCOUNT_ID not set. Endpoint returns empty data.",
-        data: [],
-      });
+      return res.status(200).json({ warning: "CF credentials not set.", data: [] });
     }
-    const data = await callCloudflareAPI(
-      `/accounts/${CF_ACCOUNT_ID}/access/apps`,
-    );
+    const data = await callCloudflareAPI(`/accounts/${CF_ACCOUNT_ID}/access/apps`);
     res.json(data);
   } catch (err) {
-    console.error("Cloudflare Access Apps API error:", err.message);
+    console.error("CF Access Apps error:", err.message);
     res.status(500).json({ error: "Failed to fetch Access Apps" });
   }
 });
@@ -142,94 +142,83 @@ app.get("/api/cloudflare/access/apps", async (req, res) => {
 app.get("/api/cloudflare/access/organizations", async (req, res) => {
   try {
     if (!CF_API_TOKEN || !CF_ACCOUNT_ID) {
-      return res.status(200).json({
-        warning:
-          "CF_API_TOKEN or CF_ACCOUNT_ID not set. Endpoint returns empty data.",
-        data: [],
-      });
+      return res.status(200).json({ warning: "CF credentials not set.", data: [] });
     }
-    const data = await callCloudflareAPI(
-      `/accounts/${CF_ACCOUNT_ID}/access/organizations`,
-    );
+    const data = await callCloudflareAPI(`/accounts/${CF_ACCOUNT_ID}/access/organizations`);
     res.json(data);
   } catch (err) {
-    console.error("Cloudflare Access Organizations API error:", err.message);
+    console.error("CF Access Organizations error:", err.message);
     res.status(500).json({ error: "Failed to fetch Access Organizations" });
   }
 });
 
 // ================================
-// ✅ 404 Handler
+// ✅ 404 HANDLER
 // ================================
 app.use((req, res) =>
-  res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` }),
+  res.status(404).json({ message: `Cannot ${req.method} ${req.originalUrl}` })
 );
 
 // ================================
-// ✅ Global Error Handler
+// ✅ GLOBAL ERROR HANDLER
 // ================================
 app.use((err, req, res, next) => {
   console.error("🔥 Server error:", err.message);
-  const errorMessage =
-    process.env.NODE_ENV === "production"
-      ? "Internal Server Error"
-      : err.message;
-  res
-    .status(500)
-    .json({ error: "Internal Server Error", details: errorMessage });
+  const isProd = process.env.NODE_ENV === "production";
+  res.status(err.status || 500).json({
+    error: "Internal Server Error",
+    details: isProd ? undefined : err.message,
+  });
 });
 
 // ================================
-// ✅ MongoDB Connection
+// ✅ SERVER STARTUP
 // ================================
-mongoose.set("strictQuery", true);
-
-if (!process.env.MONGO_URI) {
-  console.error(" MONGO_URI missing in .env");
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  console.error("❌ Supabase credentials missing from .env — exiting.");
   process.exit(1);
 }
 
-mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log(" Connected to MongoDB Atlas");
-
+const startServer = async () => {
+  try {
+    console.log("✅ Supabase client initialized");
+    
     const server = http.createServer(app);
 
     // ================================
-    // ✅ Socket.IO Setup with FIX
+    // ✅ SOCKET.IO
     // ================================
     const io = new Server(server, {
       cors: {
-        // Socket.io supports REGEX for origins, which is perfect for Cloudflare previews
-        origin: [
-          "http://localhost:5173",
-          "http://localhost:3000",
-          "https://text-arcade-africa.pages.dev",
-          /\.text-arcade-africa\.pages\.dev$/, // <-- THIS REGEX ALLOWS ALL PREVIEW SUBDOMAINS
-        ],
+        origin: (origin, callback) => {
+          if (isOriginAllowed(origin)) callback(null, true);
+          else callback(new Error("Socket.IO CORS blocked: " + origin));
+        },
         methods: ["GET", "POST"],
         credentials: true,
       },
     });
 
+    // Make io available in all routes via req.io
     app.use((req, res, next) => {
       req.io = io;
       next();
     });
 
     io.on("connection", (socket) => {
-      console.log("🟢 New WebSocket connection:", socket.id);
-
-      socket.on("disconnect", () => console.log("🔴 Disconnected:", socket.id));
+      console.log("🟢 Socket connected:", socket.id);
+      socket.on("disconnect", () => console.log("🔴 Socket disconnected:", socket.id));
     });
 
-    server.listen(PORT, () => console.log(` Server running on port ${PORT}`));
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB connection error:", err.message);
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌐 ENV: ${process.env.NODE_ENV || "development"}`);
+    });
+
+  } catch (err) {
+    console.error("❌ Startup failed:", err.message);
     process.exit(1);
-  });
+  }
+};
+
+startServer();

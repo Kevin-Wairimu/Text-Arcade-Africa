@@ -366,7 +366,7 @@ export default function Admin() {
     try {
       const data = await apiCall(
         "get",
-        `/articles/${article._id}`,
+        `/articles/${article.id}`,
         null,
         "articles",
       );
@@ -399,7 +399,7 @@ export default function Admin() {
         videoUrl: full.videoUrl || "",
         imageLabels: mergedLabels,
       });
-      setEditingArticle(full._id);
+      setEditingArticle(full.id);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       alert("Failed to load article");
@@ -409,7 +409,7 @@ export default function Admin() {
   const handleReorderSave = async () => {
     setIsSubmitting(true);
     try {
-      const orders = articles.map((a, i) => ({ id: a._id, order: i }));
+      const orders = articles.map((a, i) => ({ id: a.id, order: i }));
       await apiCall("post", "/articles/reorder", { orders }, "articles");
       setIsOrderChanged(false);
       alert("Article sequence updated!");
@@ -500,7 +500,7 @@ export default function Admin() {
   };
 
   const handleUserEdit = (user) => {
-    setEditingUser(user._id);
+    setEditingUser(user.id);
     setUserForm({
       name: user.name,
       email: user.email,
@@ -524,7 +524,7 @@ export default function Admin() {
     try {
       await apiCall(
         "put",
-        `/users/${user._id}/suspend`,
+        `/users/${user.id}/suspend`,
         { suspended: !user.suspended },
         "users",
       );
@@ -691,7 +691,7 @@ export default function Admin() {
                     >
                       {articles.map((art) => (
                         <Reorder.Item
-                          key={art._id}
+                          key={art.id}
                           value={art}
                           className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl shadow-md flex items-center gap-6 border border-taa-primary/5 cursor-grab active:cursor-grabbing"
                         >
@@ -811,8 +811,8 @@ export default function Admin() {
                               content: e.target.value,
                             })
                           }
-                          placeholder="Write your article here. Use 'Place in story' to insert images — they appear as [IMG:url|caption] tokens here and as real images in the preview."
-                          required
+                          // placeholder="Write your article here. Use 'Place in story' to insert images — they appear as [IMG:url|caption] tokens here and as real images in the preview."
+                          // required
                         />
                         {/* Token hint badge */}
                         {articleForm.content.includes("[IMG:") && (
@@ -1083,7 +1083,7 @@ export default function Admin() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {articles.map((art) => (
                   <div
-                    key={art._id}
+                    key={art.id}
                     className="glass-card rounded-3xl overflow-hidden flex flex-col group border-taa-primary/5 shadow-xl hover:shadow-2xl transition-all"
                   >
                     <div className="h-48 relative overflow-hidden bg-taa-dark">
@@ -1119,7 +1119,7 @@ export default function Admin() {
                         </button>
                         <button
                           onClick={() =>
-                            API.delete(`/articles/${art._id}`, {
+                            API.delete(`/articles/${art.id}`, {
                               headers: { Authorization: `Bearer ${token}` },
                             }).then(fetchArticles)
                           }
@@ -1142,7 +1142,7 @@ export default function Admin() {
                             {art.views || 0} VIEWS
                           </span>
                           <a
-                            href={`/article/${art.slug || art._id}`}
+                            href={`/article/${art.slug || art.id}`}
                             target="_blank"
                             rel="noreferrer"
                             className="text-gray-400 hover:text-taa-primary transition-colors"
@@ -1352,7 +1352,7 @@ export default function Admin() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {users.map((u) => (
                   <div
-                    key={u._id}
+                    key={u.id}
                     className="glass-card p-8 rounded-[3rem] border-taa-primary/5 flex flex-col group shadow-xl"
                   >
                     <div className="flex items-start justify-between mb-8">
@@ -1382,7 +1382,7 @@ export default function Admin() {
                           <Edit3 size={16} />
                         </button>
                         <button
-                          onClick={() => handleUserDelete(u._id)}
+                          onClick={() => handleUserDelete(u.id)}
                           className="p-3 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
                         >
                           <Trash2 size={16} />

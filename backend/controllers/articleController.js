@@ -1,5 +1,4 @@
-const mongoose = require("mongoose");
-const Article = require("../models/Article");
+const supabase = require("../config/supabase");
 const slugify = require("slugify");
 
 // --- GET article by slug ---
@@ -8,18 +7,21 @@ exports.getArticleBySlug = async (req, res) => {
     const { slug } = req.params;
     if (!slug) return res.status(400).json({ message: "Slug is required" });
 
-    const query = { slug };
-
     // Increment views if not Admin
     if (req.method === 'GET' && (!req.user || req.user.role !== 'Admin')) {
-      await Article.updateOne(query, { $inc: { views: 1 } });
+      await supabase.rpc('increment_views_by_slug', { article_slug: slug });
       if (req.io) {
         req.io.emit("viewsUpdated", { slug });
       }
     }
 
-    const article = await Article.findOne(query).lean();
-    if (!article) return res.status(404).json({ message: "Article not found" });
+    const { data: article, error } = await supabase
+      .from('articles')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (error || !article) return res.status(404).json({ message: "Article not found" });
 
     res.status(200).json({ article });
   } catch (err) {
@@ -33,65 +35,70 @@ exports.getAllArticles = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
-    const skip = (page - 1) * limit;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
-    const filter = {};
-    if (req.query.category && req.query.category !== "All") filter.category = req.query.category;
-    if (req.query.search) {
-      const regex = new RegExp(req.query.search.trim(), "i");
-      filter.$or = [{ title: regex }, { content: regex }];
+    let query = supabase
+      .from('articles')
+      .select('id, title, image, images, category, views, publishedAt, slug, author, content, order, imageLabels', { count: 'exact' });
+
+    if (req.query.category && req.query.category !== "All") {
+      query = query.eq('category', req.query.category);
     }
 
-    const articles = await Article.find(filter)
-      .select("title image images category views publishedAt slug author content order imageLabels")
-      .sort({ order: 1, publishedAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    if (req.query.search) {
+      const search = req.query.search.trim();
+      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
+    }
 
-    // Map articles to truncate content for the list view to reduce payload size
+    const { data: articles, count: total, error } = await query
+      .order('order', { ascending: true })
+      .order('publishedAt', { ascending: false })
+      .range(from, to);
+
+    if (error) throw error;
+
     const optimizedArticles = articles.map(article => ({
       ...article,
       content: article.content ? article.content.substring(0, 200) : ""
     }));
 
-    const total = await Article.countDocuments(filter);
-
-    res.json({ articles: optimizedArticles, total, page, limit, hasMore: page * limit < total });
+    res.json({ articles: optimizedArticles, total, page, limit, hasMore: (page * limit) < total });
   } catch (err) {
     console.error("Error fetching articles:", err);
     res.status(500).json({ error: "Failed to fetch articles", details: err.message });
   }
 };
 
-
-// -------------------  THIS IS THE CORRECTED FUNCTION -------------------
 // --- GET article by ID ---
 exports.getArticleById = async (req, res) => {
   try {
     const { id } = req.params;
-    const query = mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id };
+    
+    // Check if ID is a valid UUID
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const field = isUUID ? 'id' : 'slug';
 
-    // --- FIX APPLIED HERE ---
-    // Step 1: Only increment the view count if:
-    // - The request method is 'GET'
-    // - The user is NOT an Admin
+    // Increment view count if not Admin
     if (req.method === 'GET' && (!req.user || req.user.role !== 'Admin')) {
-      // We use .updateOne() here because we don't need the document returned from
-      // this specific operation. This is a "fire-and-forget" update.
-      await Article.updateOne(query, { $inc: { views: 1 } });
+      if (isUUID) {
+        await supabase.rpc('increment_views', { article_id: id });
+      } else {
+        await supabase.rpc('increment_views_by_slug', { article_slug: id });
+      }
       
-      // Notify Admin via Socket.IO
       if (req.io) {
         req.io.emit("viewsUpdated", { idOrSlug: id });
       }
     }
 
-    // Step 2: Now, fetch the article with the updated view count.
-    const article = await Article.findOne(query).lean();
+    const { data: article, error } = await supabase
+      .from('articles')
+      .select('*')
+      .eq(field, id)
+      .single();
     
-    // Step 3: Check if the article exists and send the response.
-    if (!article) {
+    if (error || !article) {
       return res.status(404).json({ error: "Article not found" });
     }
 
@@ -101,22 +108,27 @@ exports.getArticleById = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch article", details: err.message });
   }
 };
-// -------------------------------------------------------------------------
-
 
 // --- CREATE article ---
 exports.createArticle = async (req, res) => {
   try {
     const images = req.body.images || [];
-    const article = new Article({
+    const articleData = {
       ...req.body,
-      image: images.length > 0 ? images[0] : req.body.image, // Fallback to body.image if provided
+      image: images.length > 0 ? images[0] : req.body.image,
       slug: slugify(req.body.title || "article", { lower: true, strict: true }),
       publishedAt: req.body.publishedAt || new Date(),
       views: req.body.views || 0,
       videoUrl: req.body.videoUrl || "",
-    });
-    await article.save();
+    };
+
+    const { data: article, error } = await supabase
+      .from('articles')
+      .insert([articleData])
+      .select()
+      .single();
+
+    if (error) throw error;
     res.status(201).json(article);
   } catch (err) {
     console.error("Error creating article:", err);
@@ -127,14 +139,35 @@ exports.createArticle = async (req, res) => {
 // --- UPDATE article ---
 exports.updateArticle = async (req, res) => {
   try {
-    if (req.body.title) req.body.slug = slugify(req.body.title, { lower: true, strict: true });
+    const updateData = { ...req.body };
     
-    // Sync main image if images array is provided
-    if (req.body.images && req.body.images.length > 0) {
-      req.body.image = req.body.images[0];
+    // Remove MongoDB/Mongoose specific or read-only fields
+    delete updateData._id;
+    delete updateData.id;
+    delete updateData.__v;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.created_at;
+    delete updateData.updated_at;
+
+    if (updateData.title) updateData.slug = slugify(updateData.title, { lower: true, strict: true });
+    
+    if (updateData.images && updateData.images.length > 0) {
+      updateData.image = updateData.images[0];
     }
 
-    const article = await Article.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true, lean: true });
+    const { data: article, error } = await supabase
+      .from('articles')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase update error:", error);
+      return res.status(400).json({ error: "Failed to update article", details: error.message });
+    }
+
     if (!article) return res.status(404).json({ error: "Article not found" });
 
     res.json(article);
@@ -147,8 +180,14 @@ exports.updateArticle = async (req, res) => {
 // --- DELETE article ---
 exports.deleteArticle = async (req, res) => {
   try {
-    const article = await Article.findByIdAndDelete(req.params.id).lean();
-    if (!article) return res.status(404).json({ error: "Article not found" });
+    const { data: article, error } = await supabase
+      .from('articles')
+      .delete()
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error || !article) return res.status(404).json({ error: "Article not found" });
 
     res.json({ message: "Article deleted successfully" });
   } catch (err) {
@@ -163,14 +202,11 @@ exports.reorderArticles = async (req, res) => {
     const { orders } = req.body; 
     if (!Array.isArray(orders)) return res.status(400).json({ error: "Orders array required" });
 
-    const bulkOps = orders.map(({ id, order }) => ({
-      updateOne: {
-        filter: { _id: id },
-        update: { order }
-      }
-    }));
+    const promises = orders.map(({ id, order }) => 
+      supabase.from('articles').update({ order }).eq('id', id)
+    );
 
-    await Article.bulkWrite(bulkOps);
+    await Promise.all(promises);
     res.json({ message: "Order updated successfully" });
   } catch (err) {
     console.error("Error reordering articles:", err);

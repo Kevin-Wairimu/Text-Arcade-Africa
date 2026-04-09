@@ -91,7 +91,7 @@ const ArticleCard = memo(({ article, index, onReadMore }) => {
       transition={{ delay: (index % 6) * 0.1 }}
       whileHover={{ y: -8 }}
       className="glass-card group flex flex-col overflow-hidden cursor-pointer rounded-2xl transition-all duration-300 h-full shadow-lg border border-taa-primary/5 hover:border-taa-primary/20"
-      onClick={() => onReadMore(article.slug || article._id)}
+      onClick={() => onReadMore(article.slug || article.id)}
     >
       <div className="relative aspect-[16/10] overflow-hidden">
         <img
@@ -385,7 +385,7 @@ export default function Home() {
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {articles.map((article, i) => (
                   <ArticleCard
-                    key={article._id || i}
+                    key={article.id || i}
                     article={article}
                     index={i}
                     onReadMore={handleReadMore}

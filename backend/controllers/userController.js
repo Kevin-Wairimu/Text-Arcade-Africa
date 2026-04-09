@@ -1,10 +1,14 @@
-const User = require('../models/User');
+const supabase = require("../config/supabase");
 const bcrypt = require('bcryptjs');
 
 // GET /api/users → returns all users (admin only)
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, name, email, role, suspended, created_at');
+
+    if (error) throw error;
     res.json({ users });
   } catch (err) {
     console.error("Error fetching users:", err);
@@ -17,15 +21,28 @@ exports.createUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
     
-    let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ message: "User already exists" });
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
 
-    user = new User({ name, email, password, role });
-    await user.save();
+    if (existingUser) return res.status(400).json({ message: "User already exists" });
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .insert([{ name, email, password: hashedPassword, role }])
+      .select()
+      .single();
+
+    if (error) throw error;
 
     res.status(201).json({
       message: "User created successfully",
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user.id, name: user.name, email: user.email, role: user.role }
     });
   } catch (err) {
     console.error("Error creating user:", err);
@@ -37,20 +54,38 @@ exports.createUser = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { name, email, password, role, suspended } = req.body;
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (role) updateData.role = role;
+    if (suspended !== undefined) updateData.suspended = suspended;
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(password, salt);
+    }
 
-    if (name) user.name = name;
-    if (email) user.email = email;
-    if (role) user.role = role;
-    if (suspended !== undefined) user.suspended = suspended;
-    if (password) user.password = password; // Model middleware will hash it
+    // Ensure we don't send Mongoose fields if they leaked into req.body
+    delete updateData._id;
+    delete updateData.id;
+    delete updateData.__v;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.created_at;
+    delete updateData.updated_at;
 
-    await user.save();
+    const { data: user, error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error || !user) return res.status(404).json({ message: "User not found" });
 
     res.json({
       message: "User updated successfully",
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role, suspended: user.suspended }
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, suspended: user.suspended }
     });
   } catch (err) {
     console.error("Error updating user:", err);
@@ -61,8 +96,14 @@ exports.updateUser = async (req, res) => {
 // DELETE /api/users/:id → delete a user (admin only)
 exports.deleteUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const { data: user, error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error || !user) return res.status(404).json({ message: "User not found" });
     res.json({ message: "User deleted successfully" });
   } catch (err) {
     console.error("Error deleting user:", err);
@@ -73,15 +114,29 @@ exports.deleteUser = async (req, res) => {
 // PUT /api/users/:id/suspend → toggle suspended
 exports.suspendUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    // First get current suspended status
+    const { data: currentUser, error: getError } = await supabase
+      .from('users')
+      .select('suspended')
+      .eq('id', req.params.id)
+      .single();
 
-    user.suspended = req.body.suspended !== undefined ? req.body.suspended : !user.suspended;
-    await user.save();
+    if (getError || !currentUser) return res.status(404).json({ message: "User not found" });
+
+    const newSuspended = req.body.suspended !== undefined ? req.body.suspended : !currentUser.suspended;
+
+    const { data: user, error: updateError } = await supabase
+      .from('users')
+      .update({ suspended: newSuspended })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
 
     res.json({
       message: "User status updated",
-      user: { _id: user._id, suspended: user.suspended }
+      user: { id: user.id, suspended: user.suspended }
     });
   } catch (err) {
     console.error("Error suspending user:", err);

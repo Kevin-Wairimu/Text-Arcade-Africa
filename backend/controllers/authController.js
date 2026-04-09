@@ -1,9 +1,8 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
-const Article = require("../models/Article");
+const supabase = require("../config/supabase");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const slugify = require("slugify");
 
 // ───────────────────────────────────────────────────────────────
 // 1. REGISTER
@@ -17,21 +16,36 @@ exports.register = async (req, res) => {
   }
 
   try {
-    let user = await User.findOne({ email });
-    if (user) {
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingUser) {
       return res
         .status(400)
         .json({ message: "User with this email already exists" });
     }
 
-    user = new User({ name, email, password, role: role || "Client" });
     const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
-    await user.save();
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .insert([{ 
+        name, 
+        email, 
+        password: hashedPassword, 
+        role: role || "Client" 
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
     console.log("SERVER: New user saved to database:", user);
 
-    // FIXED: Use `id` and `role` directly in payload
-    const payload = { id: user._id, role: user.role };
+    const payload = { id: user.id, role: user.role };
     const secret = process.env.JWT_SECRET || "your_default_secret_key";
 
     jwt.sign(payload, secret, { expiresIn: "5h" }, (err, token) => {
@@ -40,7 +54,7 @@ exports.register = async (req, res) => {
       res.status(201).json({
         token,
         user: {
-          id: user._id,
+          id: user.id,
           name: user.name,
           email: user.email,
           role: user.role,
@@ -57,8 +71,7 @@ exports.register = async (req, res) => {
 // 2. LOGIN
 // ───────────────────────────────────────────────────────────────
 exports.login = async (req, res) => {
-  console.log("SERVER: Login controller has been hit.");
-  console.log("SERVER: Received request body:", req.body);
+  console.log("SERVER: Login controller hit for email:", req.body.email);
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -68,32 +81,50 @@ exports.login = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error) {
+      console.error("SERVER: Supabase error during login:", error.message);
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    if (!user) {
+      console.log("SERVER: User not found in Supabase.");
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    console.log("SERVER: User found, checking password...");
+
     // BLOCK SUSPENDED USERS
     if (user.suspended) {
+      console.log("SERVER: User is suspended.");
       return res.status(403).json({ message: "Account suspended. Contact admin." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log("SERVER: Password mismatch.");
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // FIXED: Use `id` and `role` directly
-    const payload = { id: user._id, role: user.role };
+    console.log("SERVER: Password match, signing token...");
+    const payload = { id: user.id, role: user.role };
     const secret = process.env.JWT_SECRET || "your_default_secret_key";
 
     jwt.sign(payload, secret, { expiresIn: "5h" }, (err, token) => {
-      if (err) throw err;
+      if (err) {
+        console.error("SERVER: JWT signing error:", err.message);
+        throw err;
+      }
       console.log("SERVER: Login successful. Sending token.");
       res.json({
         token,
         user: {
-          id: user._id,
+          id: user.id,
           name: user.name,
           email: user.email,
           role: user.role,
@@ -101,13 +132,13 @@ exports.login = async (req, res) => {
       });
     });
   } catch (err) {
-    console.error("SERVER CRITICAL ERROR:", err.message);
+    console.error("SERVER LOGIN CRITICAL ERROR:", err.message);
     res.status(500).send("Server error");
   }
 };
 
 // ───────────────────────────────────────────────────────────────
-// 3. UPDATE ARTICLE
+// 3. UPDATE ARTICLE (Legacy or redundant in authController)
 // ───────────────────────────────────────────────────────────────
 exports.updateArticle = async (req, res) => {
   console.log(`SERVER: updateArticle controller hit for ID: ${req.params.id}`);
@@ -121,20 +152,26 @@ exports.updateArticle = async (req, res) => {
   }
 
   try {
-    let article = await Article.findById(req.params.id);
+    const updateData = { 
+      title, 
+      content, 
+      author, 
+      category, 
+      featured, 
+      image,
+      slug: slugify(title, { lower: true, strict: true })
+    };
 
-    if (!article) {
+    const { data: updatedArticle, error } = await supabase
+      .from('articles')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error || !updatedArticle) {
       return res.status(404).json({ message: "Article not found" });
     }
-
-    article.title = title;
-    article.content = content;
-    article.author = author;
-    article.category = category;
-    article.featured = featured;
-    article.image = image;
-
-    const updatedArticle = await article.save();
 
     console.log("SERVER: Article updated successfully:", updatedArticle.title);
     res.json(updatedArticle);
@@ -150,7 +187,12 @@ exports.updateArticle = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
-    const user = await User.findOne({ email });
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('email', email)
+      .single();
+
     if (!user) {
       return res
         .status(200)
@@ -165,21 +207,20 @@ exports.forgotPassword = async (req, res) => {
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
-    const expiryDate = Date.now() + 3600000; // 1 hour
+    const expiryDate = new Date(Date.now() + 3600000).toISOString(); // 1 hour
 
-    const updatedUser = await User.findOneAndUpdate(
-      { _id: user._id },
-      {
-        $set: {
-          resetPasswordToken: hashedToken,
-          resetPasswordExpires: expiryDate,
-        },
-      },
-      { new: true }
-    );
+    const { data: updatedUser, error } = await supabase
+      .from('users')
+      .update({
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: expiryDate,
+      })
+      .eq('id', user.id)
+      .select()
+      .single();
 
-    if (!updatedUser || updatedUser.resetPasswordToken !== hashedToken) {
-      console.log("SERVER CRITICAL ERROR: Database update failed silently.");
+    if (error || !updatedUser) {
+      console.log("SERVER CRITICAL ERROR: Database update failed.");
       throw new Error("Failed to save reset token to the database.");
     }
     console.log("SERVER: HASHED token has been successfully saved to DB.");
@@ -231,21 +272,31 @@ exports.resetPassword = async (req, res) => {
       .update(plainTokenFromURL)
       .digest("hex");
 
-    const user = await User.findOne({
-      resetPasswordToken: hashedTokenToSearch,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('resetPasswordToken', hashedTokenToSearch)
+      .gt('resetPasswordExpires', new Date().toISOString())
+      .single();
 
-    if (!user) {
+    if (error || !user) {
       return res
         .status(400)
         .json({ message: "Password reset token is invalid or has expired." });
     }
 
-    user.password = await bcrypt.hash(req.body.password, 10);
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null
+      })
+      .eq('id', user.id);
+
+    if (updateError) throw updateError;
 
     res
       .status(200)
