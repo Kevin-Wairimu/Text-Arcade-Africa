@@ -112,3 +112,31 @@
 .scrollbar-white::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.6);
 }
+
+/* ─── Article Content Spacing & Image Alignment ─── */
+.article-content p {
+  @apply mb-8 leading-[1.8] text-gray-700 dark:text-gray-300;
+}
+
+.article-content figure {
+  @apply my-12 mx-auto text-center flex flex-col items-center;
+}
+
+.article-content img {
+  @apply mx-auto block rounded-2xl shadow-2xl border border-taa-primary/10 transition-all duration-500 hover:scale-[1.01];
+  max-width: 100%;
+}
+
+@media (min-width: 768px) {
+  .article-content img {
+    max-width: 100%;
+  }
+}
+
+.article-content figcaption {
+  @apply mt-4 text-center text-xs md:text-sm font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 italic max-w-2xl mx-auto;
+}
+
+.article-content br {
+  @apply mb-4 block content-[''];
+}

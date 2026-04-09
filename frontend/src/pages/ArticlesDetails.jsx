@@ -24,6 +24,50 @@ const ArticleLoader = () => (
   </div>
 );
 
+// Injected global styles for article content
+const articleStyles = `
+  .article-content p {
+    margin-bottom: 1.6rem;
+    line-height: 1.95;
+    font-size: 1.08rem;
+  }
+  .article-content figure {
+    margin: 2rem auto;
+    text-align: center;
+    width: 100%;
+  }
+  .article-content figure img {
+    display: block;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 1rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.13);
+  }
+  .article-content figcaption {
+    margin-top: 0.3rem;
+    font-size: 0.82rem;
+    color: #888;
+    font-style: italic;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .article-content img:not(figure img) {
+    display: block;
+    margin: 2rem auto;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 1rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.13);
+  }
+  @media (max-width: 640px) {
+    .article-content figure img,
+    .article-content img:not(figure img) {
+      max-width: 100%;
+    }
+  }
+`;
+
 export default function ArticleDetails() {
   const { id, slug } = useParams();
   const identifier = id || slug;
@@ -35,6 +79,17 @@ export default function ArticleDetails() {
   const [scrollProgress, setScrollProgress] = useState(0);
 
   const articleRef = useRef();
+
+  // Inject article styles once
+  useEffect(() => {
+    const styleId = "article-content-styles";
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.innerHTML = articleStyles;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   // Scroll Progress Logic
   useEffect(() => {
@@ -136,13 +191,12 @@ export default function ArticleDetails() {
   const renderVideo = () => {
     if (!article?.videoUrl) return null;
 
-    // Check if it's a YouTube URL
     const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const youtubeMatch = article.videoUrl.match(youtubeRegex);
 
     if (youtubeMatch) {
       return (
-        <div className="relative aspect-video w-full rounded-2xl overflow-hidden mb-2 shadow-xl">
+        <div className="relative aspect-video w-full rounded-2xl overflow-hidden mb-6 shadow-xl">
           <iframe
             className="absolute inset-0 w-full h-full"
             src={`https://www.youtube.com/embed/${youtubeMatch[1]}`}
@@ -155,13 +209,12 @@ export default function ArticleDetails() {
       );
     }
 
-    // Check if it's a Vimeo URL
     const vimeoRegex = /vimeo\.com\/(?:video\/)?(\d+)/;
     const vimeoMatch = article.videoUrl.match(vimeoRegex);
 
     if (vimeoMatch) {
       return (
-        <div className="relative aspect-video w-full rounded-2xl overflow-hidden mb-2 shadow-xl">
+        <div className="relative aspect-video w-full rounded-2xl overflow-hidden mb-6 shadow-xl">
           <iframe
             className="absolute inset-0 w-full h-full"
             src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
@@ -174,13 +227,12 @@ export default function ArticleDetails() {
       );
     }
 
-    // Local or direct video URL
     const videoSrc = article.videoUrl.startsWith('/uploads/') 
       ? `${BACKEND_URL}${article.videoUrl}`
       : article.videoUrl;
 
     return (
-      <div className="relative w-full rounded-2xl overflow-hidden mb-2 shadow-xl bg-black aspect-video">
+      <div className="relative w-full rounded-2xl overflow-hidden mb-6 shadow-xl bg-black aspect-video">
         <video 
           key={videoSrc}
           controls 
@@ -231,36 +283,55 @@ export default function ArticleDetails() {
     );
   }
 
-  // Derived calculations - safe to perform now that article is guaranteed to exist
   const isVintage = article.slug === "safaricom-sale-forget-spin-doctors-ruto-needs-truth-doctors";
   const coverImage = article.image || article.images?.[0];
   const otherImages = article.images ? article.images.filter(img => img !== coverImage) : [];
 
+  // ─── FORMAT CONTENT ───────────────────────────────────────────────
   const formattedContent = (article.content || "")
-    .replace(/my-12/g, 'my-6') // Fix existing large margins in saved HTML
-    .split(/\n\s*\n/) // Split by double newlines
-    .map(para => {
-      // If it's already a figure or other HTML block, don't wrap in <p>
-      if (para.trim().startsWith('<figure') || para.trim().startsWith('<div')) {
-        return para;
-      }
-      return `<p>${para.replace(/\n/g, '<br/>')}</p>`;
-    })
-    .join('')
+    // Fix backend image URLs
     .replace(/src="([^"]*\/uploads\/[^"]*)"/g, (match, p1) => {
-      // Only prefix with BACKEND_URL if it's a relative path
       if (p1.startsWith('http')) return match;
       const filename = p1.split('/uploads/').pop();
       return `src="${BACKEND_URL}/uploads/${filename}"`;
     })
-    .replace(/<img/g, `<img crossOrigin="anonymous" className="w-full rounded-${isVintage ? 'none' : '3xl'} my-4 shadow-lg border border-taa-primary/5"`);
+    // Wrap every <img> in a centered <figure> with optional caption
+    .replace(/<img([^>]*?)\/?>/gi, (match, attrs) => {
+      // Extract src for caption lookup
+      const srcMatch = attrs.match(/src="([^"]*)"/);
+      const src = srcMatch ? srcMatch[1] : '';
+      const caption = article.imageLabels?.[src] || '';
+      const roundedClass = isVintage ? 'border-none' : 'rounded-2xl';
+      return `
+        <figure>
+          <img ${attrs} crossorigin="anonymous" class="${roundedClass}" style="display:block;margin:0 auto;width:100%;max-width:80%;border-radius:1rem;box-shadow:0 12px 40px rgba(0,0,0,0.13);" />
+          ${caption ? `<figcaption>${caption}</figcaption>` : ''}
+        </figure>
+      `;
+    })
+    // Convert double newlines to paragraph breaks
+    .split(/\n\s*\n/)
+    .map(para => {
+      const trimmed = para.trim();
+      // Don't wrap HTML blocks in <p>
+      if (
+        trimmed.startsWith('<figure') ||
+        trimmed.startsWith('<div') ||
+        trimmed.startsWith('<h') ||
+        trimmed.startsWith('<ul') ||
+        trimmed.startsWith('<ol') ||
+        trimmed.startsWith('<blockquote') ||
+        trimmed === ''
+      ) {
+        return trimmed;
+      }
+      return `<p>${trimmed.replace(/\n/g, '<br/>')}</p>`;
+    })
+    .join('\n');
 
-
+  // ─── SPLIT CONTENT IN HALF ────────────────────────────────────────
   const contentParts = (() => {
-    // Normalize line breaks to handle different OS formats and ensure we split by paragraphs
-    const normalizedContent = formattedContent;
-    const pTags = normalizedContent.split('</p>');
-    
+    const pTags = formattedContent.split('</p>');
     if (pTags.length >= 4) {
       const midpoint = Math.floor(pTags.length / 2);
       return [
@@ -268,9 +339,12 @@ export default function ArticleDetails() {
         pTags.slice(midpoint).join('</p>')
       ];
     }
-
-    return [normalizedContent, ''];
+    return [formattedContent, ''];
   })();
+
+  const proseClasses = isVintage
+    ? 'prose-xl text-black font-serif'
+    : 'prose prose-lg max-w-none dark:prose-invert prose-headings:font-black prose-p:text-gray-700 dark:prose-p:text-gray-300';
 
   return (
     <main className={`${isVintage ? 'bg-[#fdfbf7]' : 'bg-taa-surface dark:bg-taa-dark'} min-h-screen pb-20 transition-colors duration-300`}>
@@ -303,6 +377,7 @@ export default function ArticleDetails() {
         </Link>
 
         <article className={`${isVintage ? 'bg-[#f4ecd8] border-2 border-black/20 shadow-[20px_20px_0px_rgba(0,0,0,0.05)] rounded-none' : 'bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl border border-taa-primary/5'} overflow-hidden`}>
+          
           {/* Header Image */}
           {(article.image || article.images?.[0]) && (
             <div className={`relative ${isVintage ? 'h-[400px] grayscale' : 'h-[250px] md:h-[500px]'} w-full`}>
@@ -331,7 +406,6 @@ export default function ArticleDetails() {
                   const mainImg = article.image || article.images?.[0];
                   const label = labels[mainImg] || 
                                Object.entries(labels).find(([key]) => key.includes(mainImg) || mainImg.includes(key))?.[1];
-                  
                   return label ? (
                     <p className={`mt-4 text-[10px] font-black uppercase tracking-[0.3em] ${isVintage ? 'text-black/60 font-serif italic' : 'text-white/70'}`}>
                       Delegate Identity: {label}
@@ -343,8 +417,9 @@ export default function ArticleDetails() {
           )}
 
           <div className={`${isVintage ? 'p-10 md:p-20' : 'p-4 md:p-8'}`}>
-            {/* ... rest of title/author section ... */}
-            <div className={`flex flex-wrap items-center justify-between gap-8 mb-1 pb-4 border-b ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
+
+            {/* Author / Meta Row */}
+            <div className={`flex flex-wrap items-center justify-between gap-8 mb-6 pb-6 border-b ${isVintage ? 'border-black/20' : 'border-taa-primary/10'}`}>
               <div className="flex items-center gap-5">
                 <div className={`w-14 h-14 ${isVintage ? 'bg-black rounded-none' : 'rounded-2xl bg-taa-primary'} text-white flex items-center justify-center font-black text-2xl shadow-lg`}>
                   {article.author?.[0] || "T"}
@@ -383,16 +458,15 @@ export default function ArticleDetails() {
 
             {renderVideo()}
 
-            {/* Main Article Content with combined gallery */}
+            {/* ── Article Body ── */}
             <div ref={articleRef} className={isVintage ? "font-serif text-black leading-relaxed" : ""}>
               <div 
-                className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-relaxed prose-p:mb-8 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-img:my-4 prose-figure:my-6'} whitespace-normal text-justify mb-0 article-content`}
+                className={`${proseClasses} whitespace-normal text-justify article-content`}
                 dangerouslySetInnerHTML={{ __html: contentParts[0] }}
               />
-
               {contentParts[1] && (
                 <div 
-                  className={`${isVintage ? 'prose-xl text-black' : 'prose prose-base max-w-none dark:prose-invert prose-headings:font-black prose-p:leading-relaxed prose-p:mb-8 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-img:my-4 prose-figure:my-6'} whitespace-normal text-justify mb-0 article-content`}
+                  className={`${proseClasses} whitespace-normal text-justify article-content`}
                   dangerouslySetInnerHTML={{ __html: contentParts[1] }}
                 />
               )}
@@ -413,7 +487,7 @@ export default function ArticleDetails() {
           </div>
         </article>
 
-        {/* Related Articles Section */}
+        {/* Related Articles */}
         {relatedArticles.length > 0 && (
           <div className="mt-32">
             <div className="flex items-center justify-between mb-12">
@@ -445,4 +519,3 @@ export default function ArticleDetails() {
     </main>
   );
 }
-
