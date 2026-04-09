@@ -24,15 +24,15 @@ const ArticleLoader = () => (
   </div>
 );
 
-// Injected global styles for article content
+// Global article content styles
 const articleStyles = `
   .article-content p {
-    margin-bottom: 1.6rem;
-    line-height: 1.95;
-    font-size: 1.08rem;
+    margin-bottom: 1.4rem;
+    line-height: 1.9;
+    font-size: 1.05rem;
   }
   .article-content figure {
-    margin: 2rem auto;
+    margin: 1.5rem auto;
     text-align: center;
     width: 100%;
   }
@@ -42,11 +42,11 @@ const articleStyles = `
     width: 100%;
     max-width: 100%;
     border-radius: 1rem;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.13);
+    box-shadow: 0 10px 32px rgba(0,0,0,0.12);
   }
   .article-content figcaption {
-    margin-top: 0.3rem;
-    font-size: 0.82rem;
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
     color: #888;
     font-style: italic;
     text-align: center;
@@ -54,16 +54,17 @@ const articleStyles = `
   }
   .article-content img:not(figure img) {
     display: block;
-    margin: 2rem auto;
+    margin: 1.5rem auto;
     width: 100%;
     max-width: 100%;
     border-radius: 1rem;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.13);
+    box-shadow: 0 10px 32px rgba(0,0,0,0.12);
   }
   @media (max-width: 640px) {
     .article-content figure img,
     .article-content img:not(figure img) {
       max-width: 100%;
+      border-radius: 0.5rem;
     }
   }
 `;
@@ -80,7 +81,7 @@ export default function ArticleDetails() {
 
   const articleRef = useRef();
 
-  // Inject article styles once
+  // Inject styles once
   useEffect(() => {
     const styleId = "article-content-styles";
     if (!document.getElementById(styleId)) {
@@ -91,7 +92,7 @@ export default function ArticleDetails() {
     }
   }, []);
 
-  // Scroll Progress Logic
+  // Scroll progress
   useEffect(() => {
     const handleScroll = () => {
       const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
@@ -108,14 +109,11 @@ export default function ArticleDetails() {
       setError("Article not found.");
       return;
     }
-
     try {
       setLoading(true);
       const { data } = await API.get(`/articles/${identifier}`);
       const currentArticle = data.article || data;
       setArticle(currentArticle);
-
-      // Fetch related articles (same category)
       const relatedRes = await API.get(`/articles?category=${currentArticle.category}&limit=3`);
       setRelatedArticles(relatedRes.data.articles.filter(a => a.id !== currentArticle.id));
     } catch (err) {
@@ -150,10 +148,7 @@ export default function ArticleDetails() {
 
   const handleShare = useCallback(() => {
     if (navigator.share) {
-      navigator.share({
-        title: article.title,
-        url: getArticleLink(),
-      }).catch(() => {});
+      navigator.share({ title: article.title, url: getArticleLink() }).catch(() => {});
     } else {
       handleCopy();
     }
@@ -164,7 +159,6 @@ export default function ArticleDetails() {
     const btn = document.getElementById('pdf-btn');
     btn.innerText = "Generating...";
     btn.disabled = true;
-
     try {
       const canvas = await html2canvas(articleRef.current, {
         scale: 2,
@@ -172,12 +166,10 @@ export default function ArticleDetails() {
         useCORS: true,
         logging: false,
       });
-
       const imgData = canvas.toDataURL("image/jpeg", 0.8);
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
       pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
       pdf.save(`${article.title.substring(0, 30).replace(/\s+/g, "_")}.pdf`);
     } catch (error) {
@@ -193,55 +185,41 @@ export default function ArticleDetails() {
 
     const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const youtubeMatch = article.videoUrl.match(youtubeRegex);
-
     if (youtubeMatch) {
       return (
         <div className="relative aspect-video w-full rounded-2xl overflow-hidden mb-6 shadow-xl">
-          <iframe
-            className="absolute inset-0 w-full h-full"
+          <iframe className="absolute inset-0 w-full h-full"
             src={`https://www.youtube.com/embed/${youtubeMatch[1]}`}
-            title="YouTube video player"
-            frameBorder="0"
+            title="YouTube video player" frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          ></iframe>
+            allowFullScreen />
         </div>
       );
     }
 
     const vimeoRegex = /vimeo\.com\/(?:video\/)?(\d+)/;
     const vimeoMatch = article.videoUrl.match(vimeoRegex);
-
     if (vimeoMatch) {
       return (
         <div className="relative aspect-video w-full rounded-2xl overflow-hidden mb-6 shadow-xl">
-          <iframe
-            className="absolute inset-0 w-full h-full"
+          <iframe className="absolute inset-0 w-full h-full"
             src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
-            title="Vimeo video player"
-            frameBorder="0"
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-          ></iframe>
+            title="Vimeo video player" frameBorder="0"
+            allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
         </div>
       );
     }
 
-    const videoSrc = article.videoUrl.startsWith('/uploads/') 
+    const videoSrc = article.videoUrl.startsWith('/uploads/')
       ? `${BACKEND_URL}${article.videoUrl}`
       : article.videoUrl;
 
     return (
       <div className="relative w-full rounded-2xl overflow-hidden mb-6 shadow-xl bg-black aspect-video">
-        <video 
-          key={videoSrc}
-          controls 
-          playsInline
-          preload="auto"
+        <video key={videoSrc} controls playsInline preload="auto"
           className="w-full h-full object-contain"
           poster={article.image || article.images?.[0]}
-          onContextMenu={(e) => e.preventDefault()}
-        >
+          onContextMenu={(e) => e.preventDefault()}>
           <source src={videoSrc} type="video/mp4" />
           <source src={videoSrc} type="video/webm" />
           <source src={videoSrc} type="video/ogg" />
@@ -254,7 +232,8 @@ export default function ArticleDetails() {
   const getCleanImageUrl = useCallback((url) => {
     if (!url) return "";
     if (url.startsWith('data:')) return url;
-    if (url.includes('/uploads/') && !url.startsWith('http')) {
+    if (url.startsWith('http')) return url;
+    if (url.includes('/uploads/')) {
       const filename = url.split('/uploads/').pop();
       return `${BACKEND_URL}/uploads/${filename}`;
     }
@@ -268,7 +247,7 @@ export default function ArticleDetails() {
   }, [article, getCleanImageUrl]);
 
   if (loading) return <ArticleLoader />;
-  
+
   if (error || !article) {
     return (
       <div className="max-w-xl mx-auto py-32 text-center px-6">
@@ -284,36 +263,60 @@ export default function ArticleDetails() {
   }
 
   const isVintage = article.slug === "safaricom-sale-forget-spin-doctors-ruto-needs-truth-doctors";
-  const coverImage = article.image || article.images?.[0];
-  const otherImages = article.images ? article.images.filter(img => img !== coverImage) : [];
 
-  // ─── FORMAT CONTENT ───────────────────────────────────────────────
-  const formattedContent = (article.content || "")
-    // Fix backend image URLs
-    .replace(/src="([^"]*\/uploads\/[^"]*)"/g, (match, p1) => {
+  // ─── FORMAT CONTENT ────────────────────────────────────────────────────────
+  const formattedContent = (() => {
+    let content = article.content || "";
+
+    // Step 1: Collapse 3+ consecutive blank lines into just one blank line
+    // Step 1: Collapse 3+ consecutive blank lines into just one blank line
+content = content.replace(/(\n\s*){3,}/g, "\n\n");
+
+// Step 1b: Remove plain text lines that are identical to an [IMG] caption
+// This handles the case where the caption appears as a text line before/after the image tag
+content = content.replace(
+  /^(.+)\n(\[IMG:[^\]]+\|\1\])/gm,
+  '$2'
+);
+content = content.replace(
+  /(\[IMG:[^\]]+\|([^\]]+)\])\n\2/gm,
+  '$1'
+);
+
+    // Step 2: Handle [IMG:url|caption] shortcode format
+    content = content.replace(
+      /\[IMG:([^\]|]+)\|([^\]]*)\]/g,
+      (match, url, caption) => {
+        const cleanUrl = getCleanImageUrl(url.trim());
+        const cleanCaption = caption.trim();
+        const showCaption = cleanCaption && cleanCaption !== '-';
+        return `<figure><img src="${cleanUrl}" crossorigin="anonymous" alt="${showCaption ? cleanCaption : ''}" />${showCaption ? `<figcaption>${cleanCaption}</figcaption>` : ''}</figure>`;
+      }
+    );
+
+    // Step 3: Handle raw <img> tags — wrap in figure with caption (no double caption)
+    content = content.replace(/<img([^>]*?)\/?>/gi, (match, attrs) => {
+      // Skip if this img is already inside our generated figure
+      const srcMatch = attrs.match(/src="([^"]*)"/);
+      const src = srcMatch ? srcMatch[1] : '';
+      const cleanSrc = getCleanImageUrl(src);
+      const labelCaption = article.imageLabels?.[src] || article.imageLabels?.[cleanSrc] || '';
+      const showCaption = labelCaption && labelCaption !== '-';
+      return `<figure><img src="${cleanSrc}" crossorigin="anonymous" alt="${showCaption ? labelCaption : ''}" />${showCaption ? `<figcaption>${labelCaption}</figcaption>` : ''}</figure>`;
+    });
+
+    // Step 4: Fix any remaining upload URLs
+    content = content.replace(/src="([^"]*\/uploads\/[^"]*)"/g, (match, p1) => {
       if (p1.startsWith('http')) return match;
       const filename = p1.split('/uploads/').pop();
       return `src="${BACKEND_URL}/uploads/${filename}"`;
-    })
-    // Wrap every <img> in a centered <figure> with optional caption
-    .replace(/<img([^>]*?)\/?>/gi, (match, attrs) => {
-      // Extract src for caption lookup
-      const srcMatch = attrs.match(/src="([^"]*)"/);
-      const src = srcMatch ? srcMatch[1] : '';
-      const caption = article.imageLabels?.[src] || '';
-      const roundedClass = isVintage ? 'border-none' : 'rounded-2xl';
-      return `
-        <figure>
-          <img ${attrs} crossorigin="anonymous" class="${roundedClass}" style="display:block;margin:0 auto;width:100%;max-width:80%;border-radius:1rem;box-shadow:0 12px 40px rgba(0,0,0,0.13);" />
-          ${caption ? `<figcaption>${caption}</figcaption>` : ''}
-        </figure>
-      `;
-    })
-    // Convert double newlines to paragraph breaks
-    .split(/\n\s*\n/)
-    .map(para => {
+    });
+
+    // Step 5: Split into paragraphs, wrap plain text in <p>
+    const parts = content.split(/\n\s*\n/);
+    const wrapped = parts.map(para => {
       const trimmed = para.trim();
-      // Don't wrap HTML blocks in <p>
+      if (!trimmed) return '';
       if (
         trimmed.startsWith('<figure') ||
         trimmed.startsWith('<div') ||
@@ -321,15 +324,17 @@ export default function ArticleDetails() {
         trimmed.startsWith('<ul') ||
         trimmed.startsWith('<ol') ||
         trimmed.startsWith('<blockquote') ||
-        trimmed === ''
+        trimmed.startsWith('<p')
       ) {
         return trimmed;
       }
-      return `<p>${trimmed.replace(/\n/g, '<br/>')}</p>`;
-    })
-    .join('\n');
+      return `<p>${trimmed.replace(/\n/g, ' ')}</p>`;
+    });
 
-  // ─── SPLIT CONTENT IN HALF ────────────────────────────────────────
+    return wrapped.filter(Boolean).join('\n');
+  })();
+
+  // ─── SPLIT CONTENT IN HALF ────────────────────────────────────────────────
   const contentParts = (() => {
     const pTags = formattedContent.split('</p>');
     if (pTags.length >= 4) {
@@ -350,7 +355,7 @@ export default function ArticleDetails() {
     <main className={`${isVintage ? 'bg-[#fdfbf7]' : 'bg-taa-surface dark:bg-taa-dark'} min-h-screen pb-20 transition-colors duration-300`}>
       {/* Reading Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1.5 z-[100] bg-taa-primary/10">
-        <motion.div 
+        <motion.div
           className={`h-full ${isVintage ? 'bg-black' : 'bg-taa-primary'} shadow-[0_0_10px_#1E6B2B]`}
           style={{ width: `${scrollProgress}%` }}
         />
@@ -369,15 +374,15 @@ export default function ArticleDetails() {
       </Helmet>
 
       <div className="max-w-4xl mx-auto px-4 pt-8">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className={`inline-flex items-center gap-2 ${isVintage ? 'text-black font-serif border-b border-black' : 'text-taa-primary dark:text-taa-accent font-bold'} mb-4 hover:-translate-x-2 transition-transform`}
         >
           <ChevronLeft size={20} /> {isVintage ? 'Back to Publications' : 'Back to Hub'}
         </Link>
 
         <article className={`${isVintage ? 'bg-[#f4ecd8] border-2 border-black/20 shadow-[20px_20px_0px_rgba(0,0,0,0.05)] rounded-none' : 'bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl border border-taa-primary/5'} overflow-hidden`}>
-          
+
           {/* Header Image */}
           {(article.image || article.images?.[0]) && (
             <div className={`relative ${isVintage ? 'h-[400px] grayscale' : 'h-[250px] md:h-[500px]'} w-full`}>
@@ -404,9 +409,9 @@ export default function ArticleDetails() {
                 {(() => {
                   const labels = article.imageLabels || {};
                   const mainImg = article.image || article.images?.[0];
-                  const label = labels[mainImg] || 
-                               Object.entries(labels).find(([key]) => key.includes(mainImg) || mainImg.includes(key))?.[1];
-                  return label ? (
+                  const label = labels[mainImg] ||
+                    Object.entries(labels).find(([key]) => key.includes(mainImg) || mainImg?.includes(key))?.[1];
+                  return label && label !== '-' ? (
                     <p className={`mt-4 text-[10px] font-black uppercase tracking-[0.3em] ${isVintage ? 'text-black/60 font-serif italic' : 'text-white/70'}`}>
                       Delegate Identity: {label}
                     </p>
@@ -430,9 +435,7 @@ export default function ArticleDetails() {
                   </p>
                   <p className={`text-xs ${isVintage ? 'text-black/60 font-serif italic' : 'text-gray-500 font-bold uppercase tracking-widest'}`}>
                     {new Date(article.created_at).toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
+                      month: "long", day: "numeric", year: "numeric",
                     })} • {article.views || 0} views
                   </p>
                 </div>
@@ -460,12 +463,12 @@ export default function ArticleDetails() {
 
             {/* ── Article Body ── */}
             <div ref={articleRef} className={isVintage ? "font-serif text-black leading-relaxed" : ""}>
-              <div 
+              <div
                 className={`${proseClasses} whitespace-normal text-justify article-content`}
                 dangerouslySetInnerHTML={{ __html: contentParts[0] }}
               />
               {contentParts[1] && (
-                <div 
+                <div
                   className={`${proseClasses} whitespace-normal text-justify article-content`}
                   dangerouslySetInnerHTML={{ __html: contentParts[1] }}
                 />
@@ -496,16 +499,16 @@ export default function ArticleDetails() {
             </div>
             <div className="grid md:grid-cols-2 gap-8">
               {relatedArticles.map((rel) => (
-                <Link 
-                  key={rel.id} 
+                <Link
+                  key={rel.id}
                   to={`/article/${rel.slug || rel.id}`}
                   className="glass-card group p-6 rounded-[2rem] border border-taa-primary/5 hover:border-taa-primary/20 transition-all"
                 >
                   <div className="aspect-video rounded-2xl overflow-hidden mb-6">
-                    <img 
-                      src={getCleanImageUrl(rel.image || rel.images?.[0])} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                      alt={rel.title} 
+                    <img
+                      src={getCleanImageUrl(rel.image || rel.images?.[0])}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      alt={rel.title}
                       crossOrigin="anonymous"
                     />
                   </div>

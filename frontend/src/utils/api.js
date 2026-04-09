@@ -43,9 +43,9 @@ function setRetryLoading(state) {
 export async function warmUpServer() {
   try {
     await fetch(`${BACKEND_URL}/api/health`, { method: "GET" });
-    console.log("🔥 Backend warmed up");
+    console.log("Backend warmed up");
   } catch {
-    console.warn("⚠️ Warmup failed — backend may be sleeping");
+    console.warn("Warmup failed — backend may be sleeping");
   }
 }
 
@@ -63,7 +63,7 @@ API.interceptors.request.use(
     }
     return config;
   },
-  (err) => Promise.reject(err)
+  (err) => Promise.reject(err),
 );
 
 // ================================
@@ -93,7 +93,9 @@ API.interceptors.response.use(
       config.retryCount++;
       const delay = 500 * config.retryCount; // 500ms, 1000ms, 1500ms
 
-      console.warn(`🔄 Retry ${config.retryCount}/${MAX_RETRIES} in ${delay}ms → ${config.url}`);
+      console.warn(
+        `Retry ${config.retryCount}/${MAX_RETRIES} in ${delay}ms → ${config.url}`,
+      );
       setRetryLoading(true);
 
       // Wake up backend on first retry only (avoid hammering)
@@ -115,7 +117,7 @@ API.interceptors.response.use(
     }
 
     return Promise.reject(err);
-  }
+  },
 );
 
 export default API;

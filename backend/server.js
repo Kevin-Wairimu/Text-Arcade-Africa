@@ -102,7 +102,7 @@ app.get("/api/warmup", async (req, res) => {
     await supabase
       .from("articles")
       .select("id", { count: "exact", head: true });
-    res.json({ warmed: true, message: "Backend & Supabase warmed ✅" });
+    res.json({ warmed: true, message: "Backend & Supabase warmed" });
   } catch (err) {
     res.status(500).json({ warmed: false, error: err.message });
   }
